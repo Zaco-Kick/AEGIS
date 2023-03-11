@@ -3,6 +3,15 @@
 
 ![](https://i.imgur.com/njF3rVe.jpg "Thank you for your support 😭")
 
+
+
+## 🗜️ What is this Branch?
+
+
+Welcome to the "**In-Dev**" branch, where you can opt-into the latest changes to AEGIS as they are freshly developed. This branch serves as an area for public awareness of ongoing testing for upcoming features. **Feel free to contribute and test yourself!**
+
+These changes will be exclusive to this branch on **Github**, until they're ready for offical launch for the "**Main**" branch and the **Steam Workshop**.
+
  
 
 ## ❔ What is AEGIS?
