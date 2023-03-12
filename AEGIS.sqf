@@ -17107,23 +17107,57 @@ MAZ_EZM_fnc_initFunction = {
 				
 				if((player getVariable ["ZZM_zoneID",0]) <= 0) exitWith {["In order to use this module you must first spawn a zone, using either the opened window or alternatively through use of the 'Populate World' module!","addItemFailed"] call MAZ_EZM_fnc_systemMessage; [] call LM_fnc_zoneSpawn;};
 				
+				_zoneIDs = [];
+				_zoneDescs = [];
+				
+				for "_x" from 1 to (player getVariable "ZZM_zoneID") do {
+					_zoneType = (player getVariable format["ZMM_%1_Type",_x]);
+					_zoneMarker = '';
+					if ((_zoneType == "Airport")) then {
+						_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#0)#2);
+					} else {
+						if ((_zoneType == "NameCityCapital")) then {
+							_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#1)#2);
+						} else {
+							if ((_zoneType == "NameCity")) then {
+								_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#2)#2);
+							} else {
+								if ((_zoneType == "NameVillage")) then {
+									_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#3)#2);
+								} else {
+									if ((_zoneType == "NameLocal") || (_zoneType == "Ambient")) then {
+										_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#4)#2);
+									} else {
+										if ((_zoneType == "Task")) then {
+											_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#5)#2);
+										} else {
+											_zoneMarker = 'a3\3den\data\displays\display3den\panelright\submode_marker_icon_ca.paa';
+										};
+									};
+								};
+							};
+						};
+					};
+					
+					_taskName = format["ZMM_%1_TSK",_x];
+					if ([_taskName] call BIS_fnc_taskExists) then {
+						_zoneIDs append [format['%1', _x]];
+						_zoneDescs append [[format["ID: %1, Name: %2, Type: %3",_x,(player getVariable [format["ZMM_%1_Name",_x],"No Name"]),_zoneType],"",_zoneMarker]];
+					};
+				};
+				
+				if (_zoneIDs in [[]]) exitWith {["Apologies however no zones currently have active or completed tasks available to edit! You may create a new Task using the 'Zone Task' module opened now.","addItemFailed"] call MAZ_EZM_fnc_systemMessage; [] call LM_fnc_zoneTask;};
+				
 				["Change Task Status",[
 					[
 						"LIST",
-						"NOTE: Select a Task in the Tasks menu to see the ID listed like 'Mission (#X)'!",
+						["Zone:","Choose a Zone who's Task to modify."],
 						[
-							[""],
-							[
-								["","",""]
-							],
+							_zoneIDs,
+							_zoneDescs,
 							0,
-							0
+							10
 						]
-					],
-					[
-						"EDIT",
-						["Zone Name:","Provide the name of the generated Task to modify."],
-						[""]
 					],
 					[
 						"LIST",
@@ -17153,7 +17187,7 @@ MAZ_EZM_fnc_initFunction = {
 					]
 				],{
 					params ["_values","_args","_display"];
-					_values params ['_note1','_taskID','_taskStatus','_taskControl','_zoneControl'];
+					_values params ['_taskID','_taskStatus','_taskControl','_zoneControl'];
 					_taskName = format["ZMM_%1_TSK",_taskID];
 					if ([_taskName] call BIS_fnc_taskExists) then {
 						[[_taskName,_taskStatus,_taskID,_taskControl,_zoneControl], { 
@@ -17171,10 +17205,10 @@ MAZ_EZM_fnc_initFunction = {
 							};
 						}] remoteExec ['bis_fnc_call',2,false];
 						
-						systemchat format["[ LOG ] Setting Task '%1' to status '%2', with removal set to '%3' and Zone Control set to '%4'!",_taskName,_taskStatus,_taskControl,_zoneControl];
+						systemchat format["[ LOG ] Setting Zone '%1' Task to status '%2', with removal set to '%3' and Zone Control set to '%4'!",_taskName,_taskStatus,_taskControl,_zoneControl];
 						_display closeDisplay 1;
 					} else {
-						["The Task you provided does not exist, check again!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;
+						["The Zone you provided does not currently have a task, please re-open this module to refresh and select a different zone!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;
 					};
 				},{
 					params ["_values","_args","_display"];
@@ -20767,7 +20801,7 @@ MAZ_EZM_fnc_initFunction = {
 						sleep 5;
 						playMusic "";
 					};
-					titleText [format ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t underline='1' shadow='1' color='#FFFFFF'> 9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Now Playing Track: '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>'</t>", _trackName], "PLAIN DOWN", -1, false, true];
+					titleText [format ["<t size='1.2' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t underline='1' shadow='1' color='#FFFFFF'> 9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Now Playing Track: '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>'</t>", _trackName], "PLAIN DOWN", -1, false, true];
 					playMusic _soundtrack;
 					5 fadeMusic _volume;
 					sleep 5;
@@ -21136,7 +21170,6 @@ MAZ_EZM_fnc_initFunction = {
 										};
 									};
 									if (_forEachIndex == 6) then {
-										systemChat str(_x);
 										_unitItems append [_x];
 									};
 									if (_forEachIndex == 9) then {
@@ -21276,7 +21309,7 @@ MAZ_EZM_fnc_initFunction = {
 					
 					_childRestrictions = _clusterRestrictions select 1;
 					if ((_arsenalType select 0) == "NATO") then {
-						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F"];
+						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F","arifle_SPAR_01_khk_F","arifle_SPAR_01_snd_F","arifle_SPAR_01_GL_khk_F","arifle_SPAR_01_GL_snd_F","arifle_SPAR_02_khk_F","arifle_SPAR_02_snd_F","arifle_SPAR_03_khk_F","arifle_SPAR_03_snd_F","MMG_02_camo_F"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
 							_childRestrictions append ["srifle_DMR_05_blk_F","arifle_AK12_GL_lush_F"];
@@ -21293,7 +21326,7 @@ MAZ_EZM_fnc_initFunction = {
 						_childRestrictions append ["B_RadioBag_01_tropic_F","B_RadioBag_01_mtp_F"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
-							_childRestrictions append ["B_RadioBag_01_ghex_F","B_RadioBag_01_oucamo_F"];
+							_childRestrictions append ["B_RadioBag_01_ghex_F","B_RadioBag_01_oucamo_F","B_ViperHarness_blk_F","B_ViperHarness_ghex_F","B_ViperHarness_hex_F","B_ViperHarness_khk_F","B_ViperHarness_oli_F","B_ViperLightHarness_blk_F","B_ViperLightHarness_ghex_F","B_ViperLightHarness_hex_F","B_ViperLightHarness_khk_F","B_ViperLightHarness_oli_F"];
 						} else {
 							if ((_arsenalType select 0) == "AAF") then {
 								_childRestrictions append ["B_RadioBag_01_digi_F"];
@@ -29319,6 +29352,9 @@ MAZ_EZM_fnc_initFunction = {
 							_cameraHolder = (player getVariable '_helmetCamera_cameraHolder');
 							_camera = (player getVariable '_helmetCamera_camera');
 							
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown',(player getVariable ['LM_DEH_helmetCamera_reload',-1])];
+							(findDisplay 46) displayRemoveEventHandler ['MouseButtonDown',(player getVariable ['LM_DEH_helmetCamera_fire',-1])];
+							
 							deleteVehicle _cameraHolder;
 							deleteVehicle _camera;
 							
@@ -32457,6 +32493,8 @@ MAZ_EZM_fnc_initFunction = {
 			if (M9SD_AIO_shouldCreateBox) then 
 			{
 				M9SD_AIO_SupplyBox = createVehicle ["B_supplyCrate_F", _pos, [], 0, "CAN_COLLIDE"];
+				_pos set [2, (_pos # 2) + 0.1];
+				M9SD_AIO_SupplyBox setPos _pos;
 				M9SD_AIO_SupplyBox setVehicleVarName "M9SD_AIO_SupplyBox";
 				M9SD_AIO_SupplyBox allowdamage false;;
 				M9SD_AIO_HelipadLight = createVehicle["PortableHelipadLight_01_green_F", _pos, [], 0, "CAN_COLLIDE"];
@@ -53252,14 +53290,18 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 				};
 			}];
 			
-			player addMPEventHandler ["MPRespawn", { 
-				_entity = player;
-				[[_entity],{
+			player addMPEventHandler ["MPRespawn", {
+				[player] spawn {
 					params ["_entity"];
-					{
-						_x addCuratorEditableObjects [[_entity],true];
-					} foreach allCurators;
-				}] remoteExec ["Spawn",2];
+					waitUntil {!isNull (findDisplay 46) && alive _entity};
+					[[_entity],{
+						params ["_entity"];
+						{
+							_x addCuratorEditableObjects [[_entity],true];
+						} foreach allCurators;
+					}] remoteExec ["Spawn",2];
+					["InitializePlayer", [_entity]] call BIS_fnc_dynamicGroups;
+				};
 			}];
 			
 			(findDisplay 46) displayAddEventHandler ["KeyDown", {
