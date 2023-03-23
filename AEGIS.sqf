@@ -53087,23 +53087,25 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 	[
 		"EDIT",
 		["Release:","The title of this version of AEGIS, helpful for identifying the latest version on Steam/GitHub."],
-		"V-9.2.0-0.1"
+		"V-9.2.0-0.2"
 	],
 	[
 		"EDIT",
 		["Release Date:","Day and time this version of AEGIS was released."],
-		"3/12/23, 02:40 UTC"
+		"3/22/23, 03:00 UTC"
 	],
 	[
 		"EDIT:MULTI",
 		["Release Notes:","See a list of the latest updates tied to the above release."],
-		['• Build Menu: Added ability for Zeuss to dynamically enable or disable Build Menu for players. Added ability to delete your prior placed objects which you are currently looking at. Added new "Supplies" object "Cargo Net (Box)" for storage purposes. Added map specific variants to certain objects.
+		['• Enhanced Movement: Added to the "CTRL+SPACE" keybind a check for if a player is within 1 meter of a object. If so depending on its height, a climb animation will be played in order to scale on-top or over the object.
 
-• Friendly Markers: Disabling showing empty vehicles and added proper icons to resolve observed "Error Zero Divsor" error popup.
+• Arsenal Restrictions: Added new check to clean loadout if restrictions active upon pressing the "ENTER" keys. Added for NATO items: 100 Round Khaki Tracer MX Magazine, .45ACP Green Pistol, P07 Black Pistol, All SPAR Magazine Color Variants, Woodland Assault Backpack, and Coyote Carryall Backpack.
 
-• Server Lock: Made it so module can only be enabled if more than 1 player is in a server.
+• Dynamic Tasks: For task type "Intel Transfer" fixed the spawned UAV from floating, now properly spawned angled to associated crater on ground.
 
-• Quality of Life: Added patch to return empty object, if CTRL+Clicking certain objects to avoid a error popup. Changed various variable remote execution statements to reduce the Join In Progress queue. Added new patch notes section when initializing AEGIS.']
+• Player/Vehicle Respawn: Placed respawns for Players and Vehicles regardless of side will now properly appear to players who Join in Progress after placement.
+
+• Support Menu: "Truck" support renamed to "HMG Truck". "Transport" support renamed to "Troop Transport".']
 	],
 	[
 		"TOOLBOX:YESNO",
