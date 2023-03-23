@@ -6270,11 +6270,12 @@ MAZ_EZM_fnc_initFunction = {
 								
 								if (count _locations > 0) then { 
 									_dataPos = selectRandom _locations;
+									_dataPos = [(_dataPos select 0), (_dataPos select 1), 0];
 								} else { 
 									_dataPos = [[_centre, 100 + random 150, random 360] call BIS_fnc_relPos, 1, 150, 1, 0, 0.5, 0, [], [ _centre, _centre ]] call BIS_fnc_findSafePos 
 								};
 
-								_dataObj = (([(_dataPos), 0, (_dataType), (_enemySide)] call BIS_fnc_spawnVehicle) select 0);
+								_dataObj = (([ATLtoASL (_dataPos), (_dataType), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
 								deleteVehicleCrew _dataObj;
 								[_dataObj,[(random 360),(((_dataObj) call BIS_fnc_getPitchBank) select 0),(((_dataObj) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
 								_dataObj lock true;
@@ -6285,13 +6286,12 @@ MAZ_EZM_fnc_initFunction = {
 								removeFromRemainsCollector [_dataObj];
 								
 								if (_dataType in ["B_UGV_01_F"]) then {
-									private _crater = (([getPosASL _dataObj, ("Crater"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
-									private _debirs = (([getPosASL _dataObj, ("Land_Garbage_square5_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+									private _crater = (([ATLtoASL (_dataPos), ("Crater"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+									private _debirs = (([ATLtoASL (_dataPos), ("Land_Garbage_square5_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
 								} else {
-									_dataObj setPos ((getPos _dataObj) vectorAdd [0,0,-1]);
 									_dataObj setVectorDirAndUp [[-0.33,0.66,-0.33], [-0.33,0.13,0.66]];
 									
-									_dataPos = getPos _dataObj;
+									_dataPos = getPosATL _dataObj;
 									_dataPos set [2,0];
 									
 									private _crater = (([ATLtoASL (_dataPos), ("CraterLong"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
@@ -17299,7 +17299,7 @@ MAZ_EZM_fnc_initFunction = {
 				};
 				
 				_newRespawn = createAgent [_type, _pos, [], 0, 'CAN_COLLIDE']; 
-				[_newRespawn, true, true] remoteExec ['BIS_fnc_moduleRespawnPosition']; 
+				[_newRespawn, true, true] remoteExec ['BIS_fnc_moduleRespawnPosition',0,true]; 
 				{ 
 					[_x, [[_newRespawn], true]] remoteExec ['addCuratorEditableObjects']; 
 				} forEach allCurators;
@@ -21312,7 +21312,7 @@ MAZ_EZM_fnc_initFunction = {
 					
 					_childRestrictions = _clusterRestrictions select 1;
 					if ((_arsenalType select 0) == "NATO") then {
-						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F","arifle_SPAR_01_khk_F","arifle_SPAR_01_snd_F","arifle_SPAR_01_GL_khk_F","arifle_SPAR_01_GL_snd_F","arifle_SPAR_02_khk_F","arifle_SPAR_02_snd_F","arifle_SPAR_03_khk_F","arifle_SPAR_03_snd_F","MMG_02_camo_F"];
+						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F","arifle_SPAR_01_khk_F","arifle_SPAR_01_snd_F","arifle_SPAR_01_GL_khk_F","arifle_SPAR_01_GL_snd_F","arifle_SPAR_02_khk_F","arifle_SPAR_02_snd_F","arifle_SPAR_03_khk_F","arifle_SPAR_03_snd_F","MMG_02_camo_F","hgun_Pistol_heavy_01_green_F","hgun_P07_blk_F"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
 							_childRestrictions append ["srifle_DMR_05_blk_F","arifle_AK12_GL_lush_F"];
@@ -21321,12 +21321,18 @@ MAZ_EZM_fnc_initFunction = {
 					_childRestrictions append ["Binocular","Rangefinder"];
 					_clusterRestrictions set [1, _childRestrictions];
 					
+					_childRestrictions = _clusterRestrictions select 2;
+					if ((_arsenalType select 0) == "NATO") then {
+						_childRestrictions append ["100Rnd_65x39_caseless_khaki_mag_tracer","150Rnd_556x45_Drum_Green_Mag_Tracer_F","150Rnd_556x45_Drum_Green_Mag_F","150Rnd_556x45_Drum_Sand_Mag_Tracer_F","150Rnd_556x45_Drum_Sand_Mag_F","30Rnd_556x45_Stanag_Sand_Tracer_Yellow","30Rnd_556x45_Stanag_Sand_Tracer_Green","30Rnd_556x45_Stanag_Sand_Tracer_Red","30Rnd_556x45_Stanag_Sand_red","30Rnd_556x45_Stanag_Sand_green","30Rnd_556x45_Stanag_Sand","30Rnd_556x45_Stanag_Tracer_Green"];
+					};
+					_clusterRestrictions set [2, _childRestrictions];
+					
 					_childRestrictions = _clusterRestrictions select 3;
 					if (!((_arsenalType select 0) == "NONE")) then {
 						_childRestrictions append ["B_RadioBag_01_black_F","B_CombinationUnitRespirator_01_F","B_SCBA_01_F"];
 					};
 					if ((_arsenalType select 0) == "NATO") then {
-						_childRestrictions append ["B_RadioBag_01_tropic_F","B_RadioBag_01_mtp_F"];
+						_childRestrictions append ["B_RadioBag_01_tropic_F","B_RadioBag_01_mtp_F","B_AssaultPack_wdl_F","B_Carryall_khk"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
 							_childRestrictions append ["B_RadioBag_01_ghex_F","B_RadioBag_01_oucamo_F","B_ViperHarness_blk_F","B_ViperHarness_ghex_F","B_ViperHarness_hex_F","B_ViperHarness_khk_F","B_ViperHarness_oli_F","B_ViperLightHarness_blk_F","B_ViperLightHarness_ghex_F","B_ViperLightHarness_hex_F","B_ViperLightHarness_khk_F","B_ViperLightHarness_oli_F"];
@@ -21385,11 +21391,12 @@ MAZ_EZM_fnc_initFunction = {
 				_handlerCode =  (str {
 					[] spawn {
 						if (isNil "eventHandlersCheck") then {
+							[missionNamespace, "arsenalClosed"] call BIS_fnc_removeAllScriptedEventHandlers;
 							[missionNamespace, "arsenalOpened"] call BIS_fnc_removeAllScriptedEventHandlers;
 							[missionNamespace, "arsenalOpened", { 
 								disableSerialization; 
 								params ["_display"]; 
-								player setVariable ["_display",_display];
+								player setVariable ["LM_var_display",_display];
 								
 								_ctrlButtonClear = _display ctrlCreate ["RscButtonMenu", -1, (_display displayCtrl 44046)];
 								_ctrlButtonClear ctrlSetPosition [((ctrlPosition (_display displayCtrl 44151)) select 0),((ctrlPosition (_display displayCtrl 44151)) select 1),((ctrlPosition (_display displayCtrl 44151)) select 2),((ctrlPosition (_display displayCtrl 44151)) select 3)];
@@ -21412,6 +21419,12 @@ MAZ_EZM_fnc_initFunction = {
 								
 								(_display displayCtrl 35119) ctrlAddEventHandler ["LBDblClick", { [] spawn { sleep 0.5; [] call loadoutCheck; }; }];
 								(_display displayCtrl 36019) ctrlAddEventHandler ["ButtonClick", { [] spawn { sleep 0.5; [] call loadoutCheck; }; }];
+								LM_var_enterKeyCheck = _display displayAddEventHandler ["keydown", {
+									params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+									if (!([(_display displayCtrl 35119)] in [[controlNull]]) and !([(_display displayCtrl 36019)] in [[controlNull]]) and ((_key == 28) || (_key == 156))) then {
+										[] spawn { sleep 0.5; [] call loadoutCheck; };
+									};
+								}];
 								
 								_ctrlButtonLoad = _display displayCtrl 44147;
 								_ctrlButtonLoad ctrlSetTooltip "Select a Custom Loadout";
@@ -21435,6 +21448,9 @@ MAZ_EZM_fnc_initFunction = {
 									};
 								};
 								_ctrlRestrictNotice ctrlCommit 0;
+							}] call BIS_fnc_addScriptedEventHandler;
+							[missionNamespace, "arsenalClosed", { 
+								(player getVariable ["LM_var_display", displayNull]) displayRemoveEventHandler ["KeyDown", LM_var_enterKeyCheck];
 							}] call BIS_fnc_addScriptedEventHandler;
 							
 							eventHandlersCheck = true;
@@ -25883,12 +25899,12 @@ MAZ_EZM_fnc_initFunction = {
 				],
 				[
 				 "TOOLBOX:ENABLED",
-				 ["Truck Airdrop:","Control access to Truck Airdrop support"],
+				 ["HMG Truck Airdrop:","Control access to HMG Truck Airdrop support"],
 				 [(_entity getVariable ["_supportTruck",false])]
 				],
 				[
 				 "TOOLBOX:ENABLED",
-				 ["Transport Airdrop:","Control access to Transport Airdrop support"],
+				 ["Troop Transport Airdrop:","Control access to Troop Transport Airdrop support"],
 				 [(_entity getVariable ["_supportTransport",false])]
 				],
 				[
@@ -26705,7 +26721,7 @@ MAZ_EZM_fnc_initFunction = {
 						[[_entity],{
 							params ['_entity'];
 							sleep 2;
-							_entity setVariable ["_supportTruck_ItemID", ([_entity,"Call",["Truck Airdrop (1 HMG)"],["
+							_entity setVariable ["_supportTruck_ItemID", ([_entity,"Call",["HMG Truck Airdrop"],["
 								Support_fnc_getScreenPosition = {
 									params [['_screenPos',getMousePosition,[[]],2]];
 
@@ -26801,6 +26817,10 @@ MAZ_EZM_fnc_initFunction = {
 									_veh = (([AGLtoASL [0,0,80], _dropLoad, 1, [0,0,0],_dir,{0},true] call BIS_fnc_spawnObjects) select 0);
 									_veh allowDamage false;
 									_veh attachTo [_para,[0,0,0]];
+									if (worldName == 'Enoch') then {
+										_veh setObjectTextureGlobal [0, 'a3\soft_f_enoch\offroad_01\data\offroad_01_ext_eaf_co.paa'];
+										_veh setObjectTextureGlobal [1, 'a3\soft_f_enoch\offroad_01\data\offroad_01_ext_eaf_co.paa'];
+									};
 
 									_carrier animateDoor [_doorAnim,0];
 									
@@ -26865,7 +26885,7 @@ MAZ_EZM_fnc_initFunction = {
 							"]] call BIS_fnc_addCommMenuItem)];
 							_entity setVariable ["_supportTruck",true];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now has access to the Truck Airdrop support (1 HMG)!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now has access to the HMG Truck Airdrop support (1 HMG)!", (name _entity)];
 					};
 				} else {
 					if (!((_entity getVariable ["_supportTruck_ItemID",-1]) == -1)) then {
@@ -26876,7 +26896,7 @@ MAZ_EZM_fnc_initFunction = {
 							_entity setVariable ["_supportTruck_ItemID",-1];
 							_entity setVariable ["_supportTruck",false];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now no longer has access to the Truck Airdrop support (1 HMG)!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now no longer has access to the HMG Truck Airdrop support (1 HMG)!", (name _entity)];
 					};
 				};
 				
@@ -26885,7 +26905,7 @@ MAZ_EZM_fnc_initFunction = {
 						[[_entity],{
 							params ['_entity'];
 							sleep 2;
-							_entity setVariable ["_supportTransport_ItemID", ([_entity,"Call",["Transport Truck Airdrop"],["
+							_entity setVariable ["_supportTransport_ItemID", ([_entity,"Call",["Troop Transport Airdrop"],["
 								Support_fnc_getScreenPosition = {
 									params [['_screenPos',getMousePosition,[[]],2]];
 
@@ -26913,7 +26933,7 @@ MAZ_EZM_fnc_initFunction = {
 												player sideRadio (selectRandom ['mp_groundsupport_01_slingloadrequested_IHQ_0','mp_groundsupport_01_slingloadrequested_IHQ_1','mp_groundsupport_01_slingloadrequested_IHQ_2']);
 											};
 										};
-										[_side, 'HQ'] sideChat (format ['Be advised, 1x Transport Truck Airdrop inbound to Grid ''%1''!', (mapGridPosition (_pos))]);
+										[_side, 'HQ'] sideChat (format ['Be advised, 1x Troop Transport Airdrop inbound to Grid ''%1''!', (mapGridPosition (_pos))]);
 									};
 								}] remoteExec ['bis_fnc_call',0,false];
 								[_pos,_side] spawn {
@@ -27018,7 +27038,7 @@ MAZ_EZM_fnc_initFunction = {
 													player sideRadio (selectRandom ['mp_groundsupport_10_slingloadsucceeded_IHQ_0','mp_groundsupport_10_slingloadsucceeded_IHQ_1','mp_groundsupport_10_slingloadsucceeded_IHQ_2']);
 												};
 											};
-											[_side, 'HQ'] sideChat (format ['Be advised, 1x Transport Truck Airdrop successfully landed at Grid ''%1''!', (mapGridPosition (_pos))]);
+											[_side, 'HQ'] sideChat (format ['Be advised, 1x Troop Transport Airdrop successfully landed at Grid ''%1''!', (mapGridPosition (_pos))]);
 										};
 									}] remoteExec ['bis_fnc_call',0,false];
 									
@@ -27045,7 +27065,7 @@ MAZ_EZM_fnc_initFunction = {
 							"]] call BIS_fnc_addCommMenuItem)];
 							_entity setVariable ["_supportTransport",true];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now has access to the Transport Truck Airdrop support!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now has access to the Troop Transport Truck Airdrop support!", (name _entity)];
 					};
 				} else {
 					if (!((_entity getVariable ["_supportTransport_ItemID",-1]) == -1)) then {
@@ -27056,7 +27076,7 @@ MAZ_EZM_fnc_initFunction = {
 							_entity setVariable ["_supportTransport_ItemID",-1];
 							_entity setVariable ["_supportTransport",false];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now no longer has access to the Transport Truck Airdrop support!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now no longer has access to the Troop Transport Truck Airdrop support!", (name _entity)];
 					};
 				};
 				
@@ -53425,10 +53445,119 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 				};
 			}];
 			
+			PDTH_distance2Box = {
+				params ["_unit","_obj"];
+				_uPos = _obj worldToModel (getPosATL _unit);
+				_oBox = boundingBoxReal _obj;
+				_pt = [0, 0, 0];
+				{
+					if (_x < (_oBox select 0 select _forEachIndex)) then {
+						_pt set [_forEachIndex, (_oBox select 0 select _forEachIndex) - _x];
+					} else {
+						if ((_oBox select 1 select _forEachIndex) < _x) then {
+							_pt set [_forEachIndex, _x - (_oBox select 1 select _forEachIndex)];
+						}
+					}
+				} forEach _uPos;
+				_pt distance [0, 0, 0]
+			};
+			
 			(findDisplay 46) displayAddEventHandler ["KeyDown", {
 				if (((_this select 1) == 57) and (_this select 3)) then {
 					if ((isNull objectParent player) and !(incapacitatedState player == "UNCONSCIOUS") and (lifeState player == "HEALTHY") and (stance player == "STAND") and !(animationState player == "AovrPercMrunSrasWrflDf")) then {
-						[player, "AovrPercMrunSrasWrflDf"] remoteExec ["switchMove",0,false];
+						_obj = cursorObject;
+						_dist = [player, _obj] call PDTH_distance2Box;
+						_house = lineIntersectsSurfaces [getPosWorld player,getPosWorld player vectorAdd [0,0,50],player,objNull,true,1,"GEOM","NONE"];
+						_inside = false;
+						if (((_house select 0) select 3) isKindOf "house") then {
+							if (_obj == ((_house select 0) select 3)) then {
+								_inside = true;
+							};
+						};
+						_diff = ((0 boundingBoxReal _obj) select 1) vectorDiff ((0 boundingBoxReal _obj) select 0);
+						_objHeight = _diff vectorDotProduct [0,0,1];
+						_objTopZ = (((getPosATL _obj) select 2) + _objHeight) - ((getPosATL player) select 2);
+						_eyesVector = [round ((eyeDirection player) select 0), round ((eyeDirection player) select 1), round ((eyeDirection player) select 2)];
+						_bodyVector = [round ((vectorDirVisual player) select 0), round ((vectorDirVisual player) select 1), round ((vectorDirVisual player) select 2)];
+						if ((_dist <= 1) and !((getPosATL _obj) in [[0,0,0]]) and (_objTopZ >= 0.6) and !(_inside) and (_eyesVector in [_bodyVector])) then {
+							[_obj, _dist, _objTopZ] spawn {
+								params ["_obj","_dist", "_objTopZ"];
+								if (!([_obj] in [[objNull]]) and !(((_obj call BIS_fnc_objectType) select 0) in ["Soldier","Vehicle","VehicleAutonomous","Logic"])) then {
+									_anim = "";
+									_pos= [];
+									if (_objTopZ >= 0.6 and _objTopZ <= 1) then {
+										_anim = "getinhelicoptercargorfl";
+										if (!((animationState player) == _anim) and !(_anim == "")) then {
+											_lockDirection = [] spawn {
+												_dir = getDir player;
+												while {true} do {
+													[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+												};
+											};
+											_pos = ((getPos player) getPos [_dist + 0.4, (getDir player)]);
+											_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+											player allowDamage false;
+											[player, _anim] remoteExec ["switchMove",0,false];
+											[player, _anim] remoteExec ["playMoveNow",0,false];
+											waitUntil {!((animationState player) == _anim)};
+											[player, ""] remoteExec ["switchMove",0,false];
+											player setPosASL (AGLToASL _pos);
+											terminate _lockDirection;
+											sleep 0.5;
+											player allowDamage true;
+										};
+									} else {
+										if (_objTopZ > 1 and _objTopZ < 2) then {
+											_anim = "getinmrap_01_cargo";
+											if (!((animationState player) == _anim) and !(_anim == "")) then {
+												_lockDirection = [] spawn {
+													_dir = getDir player;
+													while {true} do {
+														[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+													};
+												};
+												_pos = ((getPos player) getPos [_dist + 1, (getDir player)]);
+												_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+												player allowDamage false;
+												[player, _anim] remoteExec ["switchMove",0,false];
+												[player, _anim] remoteExec ["playMoveNow",0,false];
+												waitUntil {!((animationState player) == _anim)};
+												[player, ""] remoteExec ["switchMove",0,false];
+												player setPosASL (AGLToASL _pos);
+												terminate _lockDirection;
+												sleep 1;
+												player allowDamage true;
+											};
+										} else {
+											if (_objTopZ >= 2 and _objTopZ <= 4.5) then {
+												_anim = "getinhemttback";
+												if (!((animationState player) == _anim) and !(_anim == "")) then {
+													_lockDirection = [] spawn {
+														_dir = getDir player;
+														while {true} do {
+															[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+														};
+													};
+													_pos = ((getPos player) getPos [_dist + 1.2, (getDir player)]);
+													_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+													player allowDamage false;
+													[player, _anim] remoteExec ["switchMove",0,false];
+													[player, _anim] remoteExec ["playMoveNow",0,false];
+													sleep 3.1;
+													[player, ""] remoteExec ["switchMove",0,false];
+													player setPosASL (AGLToASL _pos);
+													terminate _lockDirection;
+													sleep 1;
+													player allowDamage true;
+												};
+											};
+										};
+									};
+								};
+							};
+						} else {
+							[player, "AovrPercMrunSrasWrflDf"] remoteExec ["switchMove",0,false];
+						};
 					};
 				};
 			}];
@@ -53444,7 +53573,7 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 						0,
 						0,
 						0,
-						"• Press 'CTRL+SPACE' whilst upright to Jump",
+						"• Press 'CTRL+SPACE' whilst upright to Jump or whilst near an object to Climb",
 						1,
 						(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
 						"PuristaBold",
