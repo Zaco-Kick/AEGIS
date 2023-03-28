@@ -69,6 +69,18 @@ if ((((getAssignedCuratorLogic player) == ((allCurators select { str _x == "bis_
 	};
 };
 
+(findDisplay 312) displayAddEventHandler ["KeyDown", {
+	if ((_this select 1) == 35) then {
+		if ((player getVariable ["LM_var_showLogo", true])) then {
+			[false] call LM_fnc_showLogo;
+			player setVariable ["LM_var_showLogo", false, true];
+		} else {
+			[true] call LM_fnc_showLogo;
+			player setVariable ["LM_var_showLogo", true, true];
+		};
+	};
+}];
+
 comment "Common Functions";
 
 JAM_fnc_forceOpenZeus = {
@@ -17376,16 +17388,10 @@ MAZ_EZM_fnc_initFunction = {
 					_duration fadeMusic 1;
 					playMusic _soundtrack;
 					titleCut ["", "BLACK", 4];
-					_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-					[ 
-						'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-						safeZoneXAbs+safeZoneWAbs-0.62,
-						safeZoneY+safeZoneH-0.19, 
-						4, 
-						0, 
-						0.25, 
-						3090 
-					] spawn bis_fnc_dynamicText;
+					
+					if ((player getVariable ["LM_var_showLogo", true])) then {
+						[false] call LM_fnc_showLogo;
+					};
 					
 					sleep 5;
 					titleText [_quote,"PLAIN"];
@@ -17406,16 +17412,11 @@ MAZ_EZM_fnc_initFunction = {
 					"dynamicBlur" ppEffectCommit 5;
 					
 					titleCut ["", "BLACK IN", _duration];
-					_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-					[ 
-						'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-						safeZoneXAbs+safeZoneWAbs-0.62,
-						safeZoneY+safeZoneH-0.19, 
-						99999, 
-						_duration, 
-						0, 
-						3090 
-					] spawn bis_fnc_dynamicText;
+					
+					if ((player getVariable ["LM_var_showLogo", true])) then {
+						[true] call LM_fnc_showLogo;
+					};
+					
 					(_duration + 5) fadeMusic 0;
 					sleep (_duration + 5);
 					player allowDamage true;
@@ -17533,16 +17534,11 @@ MAZ_EZM_fnc_initFunction = {
 						11 fadeMusic 1;  
 						playMusic _soundtrack;  
 						titleCut ['', 'BLACK', 4];
-						_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-						[ 
-							'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-							safeZoneXAbs+safeZoneWAbs-0.62,
-							safeZoneY+safeZoneH-0.19, 
-							4, 
-							0, 
-							0.25, 
-							3090 
-						] spawn bis_fnc_dynamicText;
+						
+						if ((player getVariable ["LM_var_showLogo", true])) then {
+							[false] call LM_fnc_showLogo;
+						};
+						
 						sleep 4;
 						titleText [_quote,'PLAIN'];  
 						titleFadeOut 7; 
@@ -17623,16 +17619,11 @@ MAZ_EZM_fnc_initFunction = {
 						player enableSimulation true;
 						 
 						titleCut ['', 'BLACK IN', 4];
-						_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-						[ 
-							'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-							safeZoneXAbs+safeZoneWAbs-0.62,
-							safeZoneY+safeZoneH-0.19, 
-							99999, 
-							4, 
-							0, 
-							3090 
-						] spawn bis_fnc_dynamicText;							
+						
+						if ((player getVariable ["LM_var_showLogo", true])) then {
+							[true] call LM_fnc_showLogo;
+						};
+						
 						'dynamicBlur' ppEffectAdjust [0.0];    
 						'dynamicBlur' ppEffectCommit 4; 
 						8 fadeMusic 0;  
@@ -17648,16 +17639,9 @@ MAZ_EZM_fnc_initFunction = {
 						11 fadeMusic 1;  
 						playMusic _soundtrack;  
 						titleCut ['', 'BLACK', 4];
-						_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-						[ 
-							'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-							safeZoneXAbs+safeZoneWAbs-0.62,
-							safeZoneY+safeZoneH-0.19, 
-							4, 
-							0, 
-							0.25, 
-							3090 
-						] spawn bis_fnc_dynamicText;
+						if ((player getVariable ["LM_var_showLogo", true])) then {
+							[false] call LM_fnc_showLogo;
+						};
 						sleep 4;  
 						titleText [_quote,'PLAIN'];  
 						titleFadeOut 7; 
@@ -17707,16 +17691,9 @@ MAZ_EZM_fnc_initFunction = {
 						_camera cameraEffect ['terminate', 'back'];
 						player enableSimulation true;
 						titleCut ['', 'BLACK IN', 4];
-						_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-						[ 
-							'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-							safeZoneXAbs+safeZoneWAbs-0.62,
-							safeZoneY+safeZoneH-0.19, 
-							99999, 
-							4, 
-							0, 
-							3090 
-						] spawn bis_fnc_dynamicText;
+						if ((player getVariable ["LM_var_showLogo", true])) then {
+							[false] call LM_fnc_showLogo;
+						};
 						'dynamicBlur' ppEffectAdjust [0.0];    
 						'dynamicBlur' ppEffectCommit 4; 
 						8 fadeMusic 0;  
@@ -17765,16 +17742,9 @@ MAZ_EZM_fnc_initFunction = {
 					sleep 1;
 					playMusic _soundtrack;
 					4 fadeMusic 1;
-					_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-					[ 
-						'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-						safeZoneXAbs+safeZoneWAbs-0.62,
-						safeZoneY+safeZoneH-0.19, 
-						5, 
-						0, 
-						0.25, 
-						3090 
-					] spawn bis_fnc_dynamicText;
+					if ((player getVariable ["LM_var_showLogo", true])) then {
+						[false] call LM_fnc_showLogo;
+					};
 					[0, 4, true, false ] call BIS_fnc_cinemaBorder;
 					
 					sleep 5;
@@ -17790,16 +17760,9 @@ MAZ_EZM_fnc_initFunction = {
 					sleep 6;
 					
 					[1, 4, true, false ] call BIS_fnc_cinemaBorder;
-					_pic = "\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"; 
-					[ 
-						'<img align="center" size="1.25" shadow="1" image=' + str(_pic) + ' /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>', 
-						safeZoneXAbs+safeZoneWAbs-0.62,
-						safeZoneY+safeZoneH-0.19, 
-						99999, 
-						5, 
-						0, 
-						3090 
-					] spawn bis_fnc_dynamicText;
+					if ((player getVariable ["LM_var_showLogo", true])) then {
+						[true] call LM_fnc_showLogo;
+					};
 					8 fadeMusic 0;
 					sleep 8;
 					player allowDamage true;
@@ -52843,6 +52806,24 @@ MAZ_EZM_addZeusKeybinds_312 = {
 			};	
 		};	
 	}];
+	
+	comment "LM Keybinds - 312";
+	
+	if(!isNil "LM_DEH_showLogo312") then {	
+		(findDisplay 312) displayRemoveEventHandler ["KeyDown",LM_DEH_showLogo312];	
+	};
+	
+	LM_DEH_showLogo312 = (findDisplay 312) displayAddEventHandler ["KeyDown", {
+		if ((_this select 1) == 35) then {
+			if ((player getVariable ["LM_var_showLogo", true])) then {
+				[false] call LM_fnc_showLogo;
+				player setVariable ["LM_var_showLogo", false, true];
+			} else {
+				[true] call LM_fnc_showLogo;
+				player setVariable ["LM_var_showLogo", true, true];
+			};
+		};
+	}];
 };
 
 MAZ_EZM_addZeusKeybinds_46 = {
@@ -52854,9 +52835,27 @@ MAZ_EZM_addZeusKeybinds_46 = {
 		player action ['SWITCHWEAPON',player,player,-1];
 		waitUntil {currentWeapon player == '' or {primaryWeapon player == '' && handgunWeapon player == ''}};
 	}"];
+	
+	comment "LM Keybinds - 46";
+	
+	if(!isNil "LM_DEH_showLogo46") then {	
+		(findDisplay 46) displayRemoveEventHandler ["KeyDown",LM_DEH_showLogo46];	
+	};
+	
+	LM_DEH_showLogo46 = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+		if ((_this select 1) == 35) then {
+			if ((player getVariable ["LM_var_showLogo", true])) then {
+				[false] call LM_fnc_showLogo;
+				player setVariable ["LM_var_showLogo", false, true];
+			} else {
+				[true] call LM_fnc_showLogo;
+				player setVariable ["LM_var_showLogo", true, true];
+			};
+		};
+	}];
 };
 
-JAM_GUIfnc_groupMenuTeamSwitcher = {
+JAM_wGUIfnc_groupMenuTeamSwitcher = {
 	if (!isNull findDisplay 60490) exitWith {};
 	with uiNamespace do 
 	{
@@ -53173,150 +53172,188 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 			player setVariable ["LM_init", true];
 			LM_trimColor_RGBA = [(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])];
 			(findDisplay 46) displayAddEventHandler ["KeyDown", ((missionNamespace getVariable "LM_fnc_arsenalOpenVariable") joinString "")];
-			[ 
-				format['<img align="center" size="1.25" shadow="1" image="%1" /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>',"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"], 
-				safeZoneXAbs+safeZoneWAbs-0.62,
-				safeZoneY+safeZoneH-0.19, 
-				99999, 
-				2, 
-				0, 
-				3090 
-			] spawn bis_fnc_dynamicText;
 			
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					[1,1,1,1],
-					[(worldSize/2)-(5900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
-					(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					0,
-					"",
-					1,
-					0,
-					"",
-					"center"
-				]
-			}];
-			
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					LM_trimColor_RGBA,
-					[(worldSize / 2)-(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
-					0,
-					0,
-					0,
-					"AEGIS:",
-					1,
-					(4.5 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
-			}];
+			LM_fnc_showLogo = {
+				params ["_toShow"];
+				if (_toShow) then {
+					[ 
+						format['<img align="center" size="1.25" shadow="1" image="%1" /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>',"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"], 
+						safeZoneXAbs+safeZoneWAbs-0.62,
+						safeZoneY+safeZoneH-0.19, 
+						99999,
+						2,
+						0,
+						3090
+					] spawn bis_fnc_dynamicText;
+					
+					LM_CEH_mapLogo_left = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							[1,1,1,1],
+							[(worldSize/2)-(5900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
+							(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							0,
+							"",
+							1,
+							0,
+							"",
+							"center"
+						]
+					}];
+					
+					LM_CEH_mapTitle_name = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							LM_trimColor_RGBA,
+							[(worldSize / 2)-(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
+							0,
+							0,
+							0,
+							"AEGIS:",
+							1,
+							(4.5 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					[1,1,1,1],
-					[(worldSize / 2)+(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
-					0,
-					0,
-					0,
-					" 9.2.0",
-					1,
-					(4.5 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
-			}];
+					LM_CEH_mapTitle_vers = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							[1,1,1,1],
+							[(worldSize / 2)+(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
+							0,
+							0,
+							0,
+							" 9.2.0",
+							1,
+							(4.5 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					[1,1,1,1],
-					[(worldSize/2)+(5900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
-					(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					0,
-					"",
-					1,
-					0,
-					"",
-					"center"
-				]
-			}];
+					LM_CEH_mapLogo_right = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							[1,1,1,1],
+							[(worldSize/2)+(5900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),-(worldSize * 0.15)/2,0],
+							(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							(1500 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							0,
+							"",
+							1,
+							0,
+							"",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					LM_trimColor_RGBA,
-					[(worldSize / 2),(-(worldSize * 0.15)/2)-(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					0,
-					0,
-					0,
-					"Enhanced Zeus Modules Fork",
-					1,
-					(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
-			}];
+					LM_CEH_mapText_frame = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							LM_trimColor_RGBA,
+							[(worldSize / 2),(-(worldSize * 0.15)/2)-(2000/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							0,
+							0,
+							0,
+							"Enhanced Zeus Modules Fork",
+							1,
+							(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					LM_trimColor_RGBA,
-					[(worldSize / 2),(-(worldSize * 0.15)/2)-(3650/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					0,
-					0,
-					0,
-					"Expanded By: Lockheed Martin",
-					1,
-					(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
-			}];
+					LM_CEH_mapText_creator = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							LM_trimColor_RGBA,
+							[(worldSize / 2),(-(worldSize * 0.15)/2)-(2850/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							0,
+							0,
+							0,
+							"Adapated By: Expung3d",
+							1,
+							(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					LM_trimColor_RGBA,
-					[(worldSize / 2),(-(worldSize * 0.15)/2)-(2850/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					0,
-					0,
-					0,
-					"Adapated By: Expung3d",
-					1,
-					(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
-			}];
+					LM_CEH_mapText_expander = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							LM_trimColor_RGBA,
+							[(worldSize / 2),(-(worldSize * 0.15)/2)-(3650/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							0,
+							0,
+							0,
+							"Expanded By: Lockheed Martin",
+							1,
+							(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawLine [
-					[(worldSize / 2)-(4550/(("Altis" call BIS_fnc_mapSize) / (worldSize))),(-(worldSize * 0.15)/2)-(4400/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					[(worldSize / 2)+(4550/(("Altis" call BIS_fnc_mapSize) / (worldSize))),(-(worldSize * 0.15)/2)-(4400/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					LM_trimColor_RGBA
-				]
-			}];
+					LM_CEH_mapDivider = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawLine [
+							[(worldSize / 2)-(4550/(("Altis" call BIS_fnc_mapSize) / (worldSize))),(-(worldSize * 0.15)/2)-(4400/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							[(worldSize / 2)+(4550/(("Altis" call BIS_fnc_mapSize) / (worldSize))),(-(worldSize * 0.15)/2)-(4400/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							LM_trimColor_RGBA
+						]
+					}];
 
-			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
-				_this select 0 drawIcon [
-					"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
-					[1,1,1,1],
-					[(worldSize / 2),(-(worldSize * 0.15)/2)-(4900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
-					0,
-					0,
-					0,
-					"Friend Code: 487755911",
-					1,
-					(1.25 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
-					"PuristaBold",
-					"center"
-				]
+					LM_CEH_mapFriend = findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
+						_this select 0 drawIcon [
+							"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa",
+							[1,1,1,1],
+							[(worldSize / 2),(-(worldSize * 0.15)/2)-(4900/(("Altis" call BIS_fnc_mapSize) / (worldSize))),0],
+							0,
+							0,
+							0,
+							"Friend Code: 487755911",
+							1,
+							(1.25 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
+							"PuristaBold",
+							"center"
+						]
+					}];
+				} else {
+					[ 
+						format['<img align="center" size="1.25" shadow="1" image="%1" /><br/><t color=' + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ' align="center" size="0.5" font="PuristaBold" shadow="1"> AEGIS: <t color="#FFFFFF">9.2.0</t></t>',"\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa"], 
+						safeZoneXAbs+safeZoneWAbs-0.62,
+						safeZoneY+safeZoneH-0.19, 
+						0,
+						0,
+						0,
+						3090
+					] spawn bis_fnc_dynamicText;
+					
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapLogo_left];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapTitle_name];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapTitle_vers];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapLogo_right];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapText_frame];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapText_creator];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapText_expander];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapDivider];
+					findDisplay 12 displayCtrl 51 ctrlRemoveEventHandler ["Draw", LM_CEH_mapFriend];
+				};
+			};
+			[true] call LM_fnc_showLogo;
+			LM_DEH_showLogo46 = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+				if ((_this select 1) == 35) then {
+					if ((player getVariable ["LM_var_showLogo", true])) then {
+						[false] call LM_fnc_showLogo;
+						player setVariable ["LM_var_showLogo", false, true];
+					} else {
+						[true] call LM_fnc_showLogo;
+						player setVariable ["LM_var_showLogo", true, true];
+					};
+				};
 			}];
 			
 			findDisplay 12 displayCtrl 51 ctrlAddEventHandler ["Draw", {
