@@ -22,7 +22,7 @@ comment "LM Auto Kick Functions";
 
 if ((((getAssignedCuratorLogic player) == ((allCurators select { str _x == "bis_curator" }) # 0)) || (!((call BIS_fnc_admin) == 0)))) then { 
 	if (!(missionNamespace getVariable ["LM_var_playerConnectedEH", false])) then {
-		[missionNamespace, ["LM_var_playerConnectedEH", true]] remoteExec ["setVariable", 0, true];
+		missionNamespace setVariable ["LM_var_playerConnectedEH", true, 0];
 		[[],{
 			addMissionEventHandler ["PlayerConnected", {
 				params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
@@ -322,11 +322,11 @@ LM_fnc_objectsMapper = {
 					};
 				};
 				[_newObj,[(_azi + _azimuth),(((_newObj) call BIS_fnc_getPitchBank) select 0),(((_newObj) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
-				if (!_ASL) then {_newObj setPosASL (AGLToASL _newPos);} else {_newObj setPosASL _newPos; [_newObj,["BIS_DynO_ASL", true]] remoteExec ["setVariable", 0, true];};
+				if (!_ASL) then {_newObj setPosASL (AGLToASL _newPos);} else {_newObj setPosASL _newPos; _newObj setVariable ["BIS_DynO_ASL", true, 0];};
 				
 				
 				if (!isNil "_fuel") then {[_newObj,_fuel] remoteExec ["setFuel", 0, true];};
-				if (!isNil "_damage") then {[_newObj,["BIS_DynO_damage", _simulation]] remoteExec ["setVariable", 0, true];};
+				if (!isNil "_damage") then {_newObj setVariable ["BIS_DynO_damage", _simulation, 0];};
 				if (!isNil "_orientation") then 
 				{
 					if ((count _orientation) > 0) then 
@@ -343,7 +343,7 @@ LM_fnc_objectsMapper = {
 					};
 				};
 				if (!isNil "_init") then {_newObj call (compile ("this = _this; " + _init));};
-				if (!isNil "_simulation") then {[_newObj,["BIS_DynO_simulation", _simulation]] remoteExec ["setVariable", 0, true];};
+				if (!isNil "_simulation") then {_newObj setVariable ["BIS_DynO_simulation", _simulation, 0];};
 				if (!(_alignmentSurface)) then {_newObj setVectorUp surfaceNormal position _newObj;};
 				[_newObj,false] remoteExec ["allowDamage", 0, true];
 				[_newObj,false] remoteExec ["enableSimulationGlobal", 0, true];
@@ -6270,11 +6270,12 @@ MAZ_EZM_fnc_initFunction = {
 								
 								if (count _locations > 0) then { 
 									_dataPos = selectRandom _locations;
+									_dataPos = [(_dataPos select 0), (_dataPos select 1), 0];
 								} else { 
 									_dataPos = [[_centre, 100 + random 150, random 360] call BIS_fnc_relPos, 1, 150, 1, 0, 0.5, 0, [], [ _centre, _centre ]] call BIS_fnc_findSafePos 
 								};
 
-								_dataObj = (([(_dataPos), 0, (_dataType), (_enemySide)] call BIS_fnc_spawnVehicle) select 0);
+								_dataObj = (([ATLtoASL (_dataPos), (_dataType), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
 								deleteVehicleCrew _dataObj;
 								[_dataObj,[(random 360),(((_dataObj) call BIS_fnc_getPitchBank) select 0),(((_dataObj) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
 								_dataObj lock true;
@@ -6285,13 +6286,12 @@ MAZ_EZM_fnc_initFunction = {
 								removeFromRemainsCollector [_dataObj];
 								
 								if (_dataType in ["B_UGV_01_F"]) then {
-									private _crater = (([getPosASL _dataObj, ("Crater"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
-									private _debirs = (([getPosASL _dataObj, ("Land_Garbage_square5_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+									private _crater = (([ATLtoASL (_dataPos), ("Crater"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+									private _debirs = (([ATLtoASL (_dataPos), ("Land_Garbage_square5_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
 								} else {
-									_dataObj setPos ((getPos _dataObj) vectorAdd [0,0,-1]);
 									_dataObj setVectorDirAndUp [[-0.33,0.66,-0.33], [-0.33,0.13,0.66]];
 									
-									_dataPos = getPos _dataObj;
+									_dataPos = getPosATL _dataObj;
 									_dataPos set [2,0];
 									
 									private _crater = (([ATLtoASL (_dataPos), ("CraterLong"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
@@ -17107,23 +17107,57 @@ MAZ_EZM_fnc_initFunction = {
 				
 				if((player getVariable ["ZZM_zoneID",0]) <= 0) exitWith {["In order to use this module you must first spawn a zone, using either the opened window or alternatively through use of the 'Populate World' module!","addItemFailed"] call MAZ_EZM_fnc_systemMessage; [] call LM_fnc_zoneSpawn;};
 				
+				_zoneIDs = [];
+				_zoneDescs = [];
+				
+				for "_x" from 1 to (player getVariable "ZZM_zoneID") do {
+					_zoneType = (player getVariable format["ZMM_%1_Type",_x]);
+					_zoneMarker = '';
+					if ((_zoneType == "Airport")) then {
+						_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#0)#2);
+					} else {
+						if ((_zoneType == "NameCityCapital")) then {
+							_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#1)#2);
+						} else {
+							if ((_zoneType == "NameCity")) then {
+								_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#2)#2);
+							} else {
+								if ((_zoneType == "NameVillage")) then {
+									_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#3)#2);
+								} else {
+									if ((_zoneType == "NameLocal") || (_zoneType == "Ambient")) then {
+										_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#4)#2);
+									} else {
+										if ((_zoneType == "Task")) then {
+											_zoneMarker = (((player getVariable "ZMM_ZoneTypes_Desc")#5)#2);
+										} else {
+											_zoneMarker = 'a3\3den\data\displays\display3den\panelright\submode_marker_icon_ca.paa';
+										};
+									};
+								};
+							};
+						};
+					};
+					
+					_taskName = format["ZMM_%1_TSK",_x];
+					if ([_taskName] call BIS_fnc_taskExists) then {
+						_zoneIDs append [format['%1', _x]];
+						_zoneDescs append [[format["ID: %1, Name: %2, Type: %3",_x,(player getVariable [format["ZMM_%1_Name",_x],"No Name"]),_zoneType],"",_zoneMarker]];
+					};
+				};
+				
+				if (_zoneIDs in [[]]) exitWith {["Apologies however no zones currently have active or completed tasks available to edit! You may create a new Task using the 'Zone Task' module opened now.","addItemFailed"] call MAZ_EZM_fnc_systemMessage; [] call LM_fnc_zoneTask;};
+				
 				["Change Task Status",[
 					[
 						"LIST",
-						"NOTE: Select a Task in the Tasks menu to see the ID listed like 'Mission (#X)'!",
+						["Zone:","Choose a Zone who's Task to modify."],
 						[
-							[""],
-							[
-								["","",""]
-							],
+							_zoneIDs,
+							_zoneDescs,
 							0,
-							0
+							10
 						]
-					],
-					[
-						"EDIT",
-						["Zone Name:","Provide the name of the generated Task to modify."],
-						[""]
 					],
 					[
 						"LIST",
@@ -17153,7 +17187,7 @@ MAZ_EZM_fnc_initFunction = {
 					]
 				],{
 					params ["_values","_args","_display"];
-					_values params ['_note1','_taskID','_taskStatus','_taskControl','_zoneControl'];
+					_values params ['_taskID','_taskStatus','_taskControl','_zoneControl'];
 					_taskName = format["ZMM_%1_TSK",_taskID];
 					if ([_taskName] call BIS_fnc_taskExists) then {
 						[[_taskName,_taskStatus,_taskID,_taskControl,_zoneControl], { 
@@ -17171,10 +17205,10 @@ MAZ_EZM_fnc_initFunction = {
 							};
 						}] remoteExec ['bis_fnc_call',2,false];
 						
-						systemchat format["[ LOG ] Setting Task '%1' to status '%2', with removal set to '%3' and Zone Control set to '%4'!",_taskName,_taskStatus,_taskControl,_zoneControl];
+						systemchat format["[ LOG ] Setting Zone '%1' Task to status '%2', with removal set to '%3' and Zone Control set to '%4'!",_taskName,_taskStatus,_taskControl,_zoneControl];
 						_display closeDisplay 1;
 					} else {
-						["The Task you provided does not exist, check again!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;
+						["The Zone you provided does not currently have a task, please re-open this module to refresh and select a different zone!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;
 					};
 				},{
 					params ["_values","_args","_display"];
@@ -17265,7 +17299,7 @@ MAZ_EZM_fnc_initFunction = {
 				};
 				
 				_newRespawn = createAgent [_type, _pos, [], 0, 'CAN_COLLIDE']; 
-				[_newRespawn, true, true] remoteExec ['BIS_fnc_moduleRespawnPosition']; 
+				[_newRespawn, true, true] remoteExec ['BIS_fnc_moduleRespawnPosition',0,true]; 
 				{ 
 					[_x, [[_newRespawn], true]] remoteExec ['addCuratorEditableObjects']; 
 				} forEach allCurators;
@@ -18786,7 +18820,7 @@ MAZ_EZM_fnc_initFunction = {
 						_QS_ST_GRPrequireGPSItem = _requireGPS;								
 
 
-						_QS_ST_showEmptyVehicles = TRUE;								
+						_QS_ST_showEmptyVehicles = FALSE;								
 						_QS_ST_iconColor_empty = [0.7,0.6,0,0.5];						
 						_QS_ST_iconSize_empty = 20;										
 
@@ -19701,6 +19735,9 @@ MAZ_EZM_fnc_initFunction = {
 								_grpVehicle setVariable ['QS_ST_groupVehicleIconType',_iconType,FALSE];
 								_iconType;
 							};
+							if (_iconTypes in [[]]) then {
+								_iconTypes = _iconTypes_WEST;
+							};
 							if ((_vehicleClass isEqualTo 'Ship') || {(_vehicleClass isEqualTo 'Submarine')}) exitWith {
 								_iconType = _iconTypes select 15; _iconType;
 							};
@@ -20399,12 +20436,14 @@ MAZ_EZM_fnc_initFunction = {
 										};
 										_groupUpdateDelay = diag_tickTime + _groupUpdateDelay_timer;
 									};
+									_playerLoadout = getUnitLoadout player;
+									_gps = (_playerLoadout select 9) select 1;
 									if (_gpsRequired) then {
-										if (!('ItemGPS' in (assignedItems player))) then {
+										if (!(_gps in ['ItemGPS','B_UavTerminal','O_UavTerminal','I_UavTerminal','I_E_UavTerminal','C_UavTerminal'])) then {
 											setGroupIconsVisible [FALSE,FALSE];
 											waitUntil {
 												uiSleep 0.25;
-												('ItemGPS' in (assignedItems player))
+												(_gps in ['ItemGPS','B_UavTerminal','O_UavTerminal','I_UavTerminal','I_E_UavTerminal','C_UavTerminal'])
 											};
 										};
 									};
@@ -20767,7 +20806,7 @@ MAZ_EZM_fnc_initFunction = {
 						sleep 5;
 						playMusic "";
 					};
-					titleText [format ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t underline='1' shadow='1' color='#FFFFFF'> 9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Now Playing Track: '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>'</t>", _trackName], "PLAIN DOWN", -1, false, true];
+					titleText [format ["<t size='1.2' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t underline='1' shadow='1' color='#FFFFFF'> 9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Now Playing Track: '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>'</t>", _trackName], "PLAIN DOWN", -1, false, true];
 					playMusic _soundtrack;
 					5 fadeMusic _volume;
 					sleep 5;
@@ -21136,7 +21175,6 @@ MAZ_EZM_fnc_initFunction = {
 										};
 									};
 									if (_forEachIndex == 6) then {
-										systemChat str(_x);
 										_unitItems append [_x];
 									};
 									if (_forEachIndex == 9) then {
@@ -21276,7 +21314,7 @@ MAZ_EZM_fnc_initFunction = {
 					
 					_childRestrictions = _clusterRestrictions select 1;
 					if ((_arsenalType select 0) == "NATO") then {
-						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F"];
+						_childRestrictions append ["LMG_Zafir_F","LMG_Mk200_F","srifle_DMR_02_sniper_F","srifle_DMR_03_tan_F","arifle_SPAR_01_khk_F","arifle_SPAR_01_snd_F","arifle_SPAR_01_GL_khk_F","arifle_SPAR_01_GL_snd_F","arifle_SPAR_02_khk_F","arifle_SPAR_02_snd_F","arifle_SPAR_03_khk_F","arifle_SPAR_03_snd_F","MMG_02_camo_F","hgun_Pistol_heavy_01_green_F","hgun_P07_blk_F"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
 							_childRestrictions append ["srifle_DMR_05_blk_F","arifle_AK12_GL_lush_F"];
@@ -21285,15 +21323,21 @@ MAZ_EZM_fnc_initFunction = {
 					_childRestrictions append ["Binocular","Rangefinder"];
 					_clusterRestrictions set [1, _childRestrictions];
 					
+					_childRestrictions = _clusterRestrictions select 2;
+					if ((_arsenalType select 0) == "NATO") then {
+						_childRestrictions append ["100Rnd_65x39_caseless_khaki_mag_tracer","150Rnd_556x45_Drum_Green_Mag_Tracer_F","150Rnd_556x45_Drum_Green_Mag_F","150Rnd_556x45_Drum_Sand_Mag_Tracer_F","150Rnd_556x45_Drum_Sand_Mag_F","30Rnd_556x45_Stanag_Sand_Tracer_Yellow","30Rnd_556x45_Stanag_Sand_Tracer_Green","30Rnd_556x45_Stanag_Sand_Tracer_Red","30Rnd_556x45_Stanag_Sand_red","30Rnd_556x45_Stanag_Sand_green","30Rnd_556x45_Stanag_Sand","30Rnd_556x45_Stanag_Tracer_Green"];
+					};
+					_clusterRestrictions set [2, _childRestrictions];
+					
 					_childRestrictions = _clusterRestrictions select 3;
 					if (!((_arsenalType select 0) == "NONE")) then {
 						_childRestrictions append ["B_RadioBag_01_black_F","B_CombinationUnitRespirator_01_F","B_SCBA_01_F"];
 					};
 					if ((_arsenalType select 0) == "NATO") then {
-						_childRestrictions append ["B_RadioBag_01_tropic_F","B_RadioBag_01_mtp_F"];
+						_childRestrictions append ["B_RadioBag_01_tropic_F","B_RadioBag_01_mtp_F","B_AssaultPack_wdl_F","B_Carryall_khk"];
 					} else {
 						if ((_arsenalType select 0) == "CSAT") then {
-							_childRestrictions append ["B_RadioBag_01_ghex_F","B_RadioBag_01_oucamo_F"];
+							_childRestrictions append ["B_RadioBag_01_ghex_F","B_RadioBag_01_oucamo_F","B_ViperHarness_blk_F","B_ViperHarness_ghex_F","B_ViperHarness_hex_F","B_ViperHarness_khk_F","B_ViperHarness_oli_F","B_ViperLightHarness_blk_F","B_ViperLightHarness_ghex_F","B_ViperLightHarness_hex_F","B_ViperLightHarness_khk_F","B_ViperLightHarness_oli_F"];
 						} else {
 							if ((_arsenalType select 0) == "AAF") then {
 								_childRestrictions append ["B_RadioBag_01_digi_F"];
@@ -21349,11 +21393,12 @@ MAZ_EZM_fnc_initFunction = {
 				_handlerCode =  (str {
 					[] spawn {
 						if (isNil "eventHandlersCheck") then {
+							[missionNamespace, "arsenalClosed"] call BIS_fnc_removeAllScriptedEventHandlers;
 							[missionNamespace, "arsenalOpened"] call BIS_fnc_removeAllScriptedEventHandlers;
 							[missionNamespace, "arsenalOpened", { 
 								disableSerialization; 
 								params ["_display"]; 
-								player setVariable ["_display",_display];
+								player setVariable ["LM_var_display",_display];
 								
 								_ctrlButtonClear = _display ctrlCreate ["RscButtonMenu", -1, (_display displayCtrl 44046)];
 								_ctrlButtonClear ctrlSetPosition [((ctrlPosition (_display displayCtrl 44151)) select 0),((ctrlPosition (_display displayCtrl 44151)) select 1),((ctrlPosition (_display displayCtrl 44151)) select 2),((ctrlPosition (_display displayCtrl 44151)) select 3)];
@@ -21376,6 +21421,12 @@ MAZ_EZM_fnc_initFunction = {
 								
 								(_display displayCtrl 35119) ctrlAddEventHandler ["LBDblClick", { [] spawn { sleep 0.5; [] call loadoutCheck; }; }];
 								(_display displayCtrl 36019) ctrlAddEventHandler ["ButtonClick", { [] spawn { sleep 0.5; [] call loadoutCheck; }; }];
+								LM_var_enterKeyCheck = _display displayAddEventHandler ["keydown", {
+									params ["_displayOrControl", "_key", "_shift", "_ctrl", "_alt"];
+									if (!([(_display displayCtrl 35119)] in [[controlNull]]) and !([(_display displayCtrl 36019)] in [[controlNull]]) and ((_key == 28) || (_key == 156))) then {
+										[] spawn { sleep 0.5; [] call loadoutCheck; };
+									};
+								}];
 								
 								_ctrlButtonLoad = _display displayCtrl 44147;
 								_ctrlButtonLoad ctrlSetTooltip "Select a Custom Loadout";
@@ -21399,6 +21450,9 @@ MAZ_EZM_fnc_initFunction = {
 									};
 								};
 								_ctrlRestrictNotice ctrlCommit 0;
+							}] call BIS_fnc_addScriptedEventHandler;
+							[missionNamespace, "arsenalClosed", { 
+								(player getVariable ["LM_var_display", displayNull]) displayRemoveEventHandler ["KeyDown", LM_var_enterKeyCheck];
 							}] call BIS_fnc_addScriptedEventHandler;
 							
 							eventHandlersCheck = true;
@@ -21819,11 +21873,11 @@ MAZ_EZM_fnc_initFunction = {
 									[_instigator,_unit] spawn {
 										params ["_instigator","_unit"];
 										if (!(_instigator getVariable ["LM_var_activeFF", false])) then {
-											[_instigator, ["LM_var_activeFF", true]] remoteExec ["setVariable",0];
+											_instigator setVariable ["LM_var_activeFF", true, 0];
 											[[side _instigator, "HQ"], format["Friendly Fire will not be tolerated on unit '%1'!",name _unit]] remoteExec ["sideChat",_instigator];
 											["3DEN_notificationWarning"] remoteExec ["playSound",_instigator];
 											sleep 5;
-											[_instigator, ["LM_var_activeFF", false]] remoteExec ["setVariable",0];
+											_instigator setVariable ["LM_var_activeFF", false, 0];
 										};
 									};
 									_damage = 0;
@@ -21848,11 +21902,11 @@ MAZ_EZM_fnc_initFunction = {
 											[_instigator,_unit] spawn {
 												params ["_instigator","_unit"];
 												if (!(_instigator getVariable ["LM_var_activeFF", false])) then {
-													[_instigator, ["LM_var_activeFF", true]] remoteExec ["setVariable",0];
+													_instigator setVariable ["LM_var_activeFF", true, 0];
 													[[side _instigator, "HQ"], format["Friendly Fire will not be tolerated on unit '%1'!",name _unit]] remoteExec ["sideChat",_instigator];
 													["3DEN_notificationWarning"] remoteExec ["playSound",_instigator];
 													sleep 5;
-													[_instigator, ["LM_var_activeFF", false]] remoteExec ["setVariable",0];
+													_instigator setVariable ["LM_var_activeFF", false, 0];
 												};
 											};
 											_damage = 0;
@@ -21902,7 +21956,7 @@ MAZ_EZM_fnc_initFunction = {
 				_display closeDisplay 1;
 				
 				if(_control) then {
-					[missionNamespace,["LM_var_gameMasterUID_modControl",""]] remoteExec ["setVariable",2];
+					missionNamespace setVariable ["LM_var_gameMasterUID_modControl","",0];
 					remoteExec ["", "LM_JIP_moderatorControl"];
 					[["PlayerDisconnected", (missionNamespace getVariable ["LM_var_zeusWatcherMEH_modControl",-1])]] remoteExec ["removeMissionEventHandler",2];
 					
@@ -21925,7 +21979,7 @@ MAZ_EZM_fnc_initFunction = {
 					
 					systemchat "[ LOG ] Moderator slot usage has been enabled!";
 				} else {
-					[missionNamespace,["LM_var_gameMasterUID_modControl",getPlayerUID player]] remoteExec ["setVariable",2];
+					missionNamespace setVariable ["LM_var_gameMasterUID_modControl",getPlayerUID player,0];
 					[[], {
 						waitUntil {!(isNull findDisplay 312) && !(isNull findDisplay 46) && alive player};
 						
@@ -21942,8 +21996,7 @@ MAZ_EZM_fnc_initFunction = {
 						LM_MEH_zeusWatcher_modControl = addMissionEventHandler ["PlayerDisconnected", {
 							params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
 							if (_uid == (missionNamespace getVariable ["LM_var_gameMasterUID_modControl",""])) then {
-								remoteExec ["", "LM_JIP_moderatorControl"];
-								[missionNamespace,["LM_var_gameMasterUID_modControl",""]] remoteExec ["setVariable",2];
+								missionNamespace setVariable ["LM_var_gameMasterUID_modControl","",2];
 								
 								[[],{
 									titleText ["<t size='1.1' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Please note, the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Game Moderator</t> has been <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Enabled</t> due to the Game Master leaving, the slot is now usable!</t>", "PLAIN DOWN", -1, false, true];
@@ -21966,7 +22019,7 @@ MAZ_EZM_fnc_initFunction = {
 							};
 						}];
 						
-						[missionNamespace,["LM_var_zeusWatcherMEH_modControl",LM_MEH_zeusWatcher_modControl]] remoteExec ["setVariable",2];
+						missionNamespace setVariable ["LM_var_zeusWatcherMEH_modControl",LM_MEH_zeusWatcher_modControl,2];
 					}] remoteExec ["bis_fnc_call", 2];
 					
 					systemchat "[ LOG ] Moderator slot usage has been disabled!";
@@ -22340,13 +22393,13 @@ MAZ_EZM_fnc_initFunction = {
 							[_lbCurSel] spawn {
 								[
 									"Are you sure you want to kick this player from the server?",
-									format ["Kick Server Player '%1'", name (call compile (ctrlListboxAllPlayers lbData (lbCurSel ctrlListboxAllPlayers)))],
+									format ["Kick Server Player '%1'", ctrlListboxAllPlayers lbText (lbCurSel ctrlListboxAllPlayers)],
 									[
 										"Kick",
 										{
 											_timeKicked = systemTimeUTC;
 											_lbCurSel = lbCurSel ctrlListboxAllPlayers;
-											_player = call compile (ctrlListboxAllPlayers lbData _lbCurSel);
+											_player = (ctrlListboxAllPlayers lbData _lbCurSel) call BIS_fnc_getUnitByUID;
 											
 											_kickedLog = profileNamespace getVariable ["LM_var_kickedPlayers", []];
 											_loggedIndex = _kickedLog findIf {(_x select 0) == (getPlayerUID _player)};
@@ -22612,59 +22665,64 @@ MAZ_EZM_fnc_initFunction = {
 				_display closeDisplay 1;
 				
 				if (_control) then {
-					_playerUIDs = [];
-					{
-						_playerUIDs append [getPlayerUID _x];
-					} forEach allPlayers;
-					[missionNamespace,["LM_var_whitelistedUIDs",_playerUIDs]] remoteExec ["setVariable",0,"LM_JIP_serverLockUIDs"];
-					[missionNamespace,["LM_var_gameMasterUID_serverLock",getPlayerUID player]] remoteExec ["setVariable",2];
-					[[],{
-						waitUntil {!(isNull findDisplay 46) && alive player};
-						
-						titleText ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Please note, the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Server</t> has been <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Locked</t>, only players here can join!</t>", "PLAIN DOWN", -1, false, true];
-						
-						if (!((getPlayerUID player) in (missionNamespace getVariable ["LM_var_whitelistedUIDs", []]))) then {
-							player allowDamage false;
-							if (((getAssignedCuratorUnit ((allCurators select { str _x == "bis_curator" }) # 0)) == player) || ((getAssignedCuratorUnit ((allCurators select { str _x == "bis_curator_1" }) # 0)) == player)) then {
-								waitUntil {!(isNull findDisplay 312) && !(isNull findDisplay 46) && alive player};
-								(findDisplay 50) closeDisplay 2;
-								(findDisplay 70) closeDisplay 2;
-								(findDisplay 46) closeDisplay 1;
-								(findDisplay 312) closeDisplay 1;
-							} else {
-								(findDisplay 50) closeDisplay 2;
-								(findDisplay 70) closeDisplay 2;
-								(findDisplay 46) closeDisplay 1;
-								(findDisplay 312) closeDisplay 1;
+					if ((count allPlayers) > 1) then {
+						_playerUIDs = [];
+						{
+							_playerUIDs append [getPlayerUID _x];
+						} forEach allPlayers;
+						missionNamespace setVariable ["LM_var_whitelistedUIDs",_playerUIDs,0];
+						missionNamespace setVariable ["LM_var_gameMasterUID_serverLock",getPlayerUID player,2];
+						[[],{
+							waitUntil {!(isNull findDisplay 46) && alive player};
+							
+							titleText ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Please note, the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Server</t> has been <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Locked</t>, only players here can join!</t>", "PLAIN DOWN", -1, false, true];
+							
+							if (!((getPlayerUID player) in (missionNamespace getVariable ["LM_var_whitelistedUIDs", []]))) then {
+								player allowDamage false;
+								if (((getAssignedCuratorUnit ((allCurators select { str _x == "bis_curator" }) # 0)) == player) || ((getAssignedCuratorUnit ((allCurators select { str _x == "bis_curator_1" }) # 0)) == player)) then {
+									waitUntil {!(isNull findDisplay 312) && !(isNull findDisplay 46) && alive player};
+									(findDisplay 50) closeDisplay 2;
+									(findDisplay 70) closeDisplay 2;
+									(findDisplay 46) closeDisplay 1;
+									(findDisplay 312) closeDisplay 1;
+								} else {
+									(findDisplay 50) closeDisplay 2;
+									(findDisplay 70) closeDisplay 2;
+									(findDisplay 46) closeDisplay 1;
+									(findDisplay 312) closeDisplay 1;
+								};
 							};
-						};
-					}] remoteExec ["bis_fnc_call", 0, "LM_JIP_serverLock"];
-					
-					[[],{
-						LM_MEH_zeusWatcher_lockServer = addMissionEventHandler ["PlayerDisconnected", {
-							params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
-							if (_uid == (missionNamespace getVariable ["LM_var_gameMasterUID_serverLock",""])) then {
-								remoteExec ["", "LM_var_whitelistedUIDs"];
-								remoteExec ["", "LM_JIP_serverLockUIDs"];
-								[missionNamespace,["LM_var_gameMasterUID_serverLock",""]] remoteExec ["setVariable",2];
-								remoteExec ["", "LM_JIP_serverLock"];
-								
-								[[],{
-									titleText ["<t size='1.1' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Please note, the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Server</t> has been <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Un-Locked</t> due to the Game Master leaving, all players now can join!</t>", "PLAIN DOWN", -1, false, true];
-								}] remoteExec ["bis_fnc_call", 0, false];
-								
-								[["PlayerDisconnected", (missionNamespace getVariable ["LM_var_zeusWatcherMEH_lockServer",-1])]] remoteExec ["removeMissionEventHandler",2];
-							};
-						}];
+						}] remoteExec ["bis_fnc_call", 0, "LM_JIP_serverLock"];
 						
-						[missionNamespace,["LM_var_zeusWatcherMEH_lockServer",LM_MEH_zeusWatcher_lockServer]] remoteExec ["setVariable",2];
-					}] remoteExec ["bis_fnc_call", 2];
-					
-					systemchat "[ LOG ] Server has been locked, any players not currently here who join a slot will now be disconnected!";
+						[[],{
+							LM_MEH_zeusWatcher_lockServer = addMissionEventHandler ["PlayerDisconnected", {
+								params ["_id", "_uid", "_name", "_jip", "_owner", "_idstr"];
+								if (_uid == (missionNamespace getVariable ["LM_var_gameMasterUID_serverLock",""])) then {
+									missionNamespace setVariable ["LM_var_whitelistedUIDs",[],0];
+									remoteExec ["", "LM_JIP_serverLockUIDs"];
+									missionNamespace setVariable ["LM_var_gameMasterUID_serverLock","",2];
+									remoteExec ["", "LM_JIP_serverLock"];
+									
+									[[],{
+										titleText ["<t size='1.1' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>Please note, the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Server</t> has been <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Un-Locked</t> due to the Game Master leaving, all players now can join!</t>", "PLAIN DOWN", -1, false, true];
+									}] remoteExec ["bis_fnc_call", 0, false];
+									
+									[["PlayerDisconnected", (missionNamespace getVariable ["LM_var_zeusWatcherMEH_lockServer",-1])]] remoteExec ["removeMissionEventHandler",2];
+								};
+							}];
+							
+							missionNamespace setVariable ["LM_var_zeusWatcherMEH_lockServer",LM_MEH_zeusWatcher_lockServer,2];
+						}] remoteExec ["bis_fnc_call", 2];
+						
+						systemchat "[ LOG ] Server has been locked, any players not currently here who join a slot will now be disconnected!";
+					} else {
+						systemchat "[ LOG ] This module cannot be activated if there is not more than 1 player on a server!";
+						playSound "3DEN_notificationWarning";
+					};
 				} else {
 					remoteExec ["", "LM_var_whitelistedUIDs"];
 					remoteExec ["", "LM_JIP_serverLockUIDs"];
-					[missionNamespace,["LM_var_gameMasterUID_serverLock",""]] remoteExec ["setVariable",2];
+					missionNamespace setVariable ["LM_var_gameMasterUID_serverLock","",2];
 					remoteExec ["", "LM_JIP_serverLock"];
 					[["PlayerDisconnected", (missionNamespace getVariable ["LM_var_zeusWatcherMEH_lockServer",-1])]] remoteExec ["removeMissionEventHandler",2];
 					
@@ -22781,612 +22839,239 @@ MAZ_EZM_fnc_initFunction = {
 
 		LM_fnc_buildMenuModule = {
 			params ["_entity"];
-			if(isNull _entity || !((typeOf _entity) isKindOf "Man") || !(isPlayer _entity)) exitWith {["Place on players only!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;};
-			_buildCode =  (str {
-				[(_this select 1), (_this select 3)] spawn {
-					if (((_this select 0) == 48) and (_this select 1)) then {
-						disableSerialization;
-						_indexObjects = [
-						[["Land_Cargo_Tower_V3_F","Military Cargo Tower (Brown)"],["Land_Cargo_Patrol_V3_F","Military Cargo Post (Brown)"],["Land_Cargo_HQ_V3_F","Military Cargo HQ (Brown)"],["Land_Cargo_House_V3_F","Military Cargo House (Brown)"],["Land_GuardTower_01_F","Guard Tower (Big)"],["Land_GuardTower_02_F","Guard Tower (Small)"],["Land_DeerStand_01_F","Deer Stand (v1)"],["Land_DeerStand_02_F","Deer Stand (v2)"],["Land_MedicalTent_01_NATO_generic_open_F","Tent (Field, Open)"],["Land_MedicalTent_01_NATO_generic_outer_F","Tent (Field, Outer)"]],
-						
-						[["Land_BagBunker_Large_F","Bunker (Large)"],["Land_BagBunker_Small_F","Bunker (Small)"],["Land_BagBunker_Tower_F","Bunker (Tower)"],["Land_HBarrierTower_F","H-barrier Watchtower"],["Land_Bunker_02_light_left_F","Old Bunker (Left)"],["Land_Bunker_02_light_double_F","Old Bunker"],["Land_Bunker_02_light_right_F","Old Bunker (Right)"],["Land_Bunker_01_tall_F","Modular Bunker (Tall)"],["Land_Bunker_01_small_F","Modular Bunker (Small)"],["Land_Bunker_01_HQ_F","Modular Bunker (HQ)"],["Land_Bunker_01_big_F","Modular Bunker (Big)"]],
-						
-						[["Land_BagFence_Corner_F","Sandbag Wall (Corner)"],["Land_BagFence_Long_F","Sandbag Wall (Long)"],["Land_BagFence_Short_F","Sandbag Wall (Short)"],["Land_BagFence_Round_F","Sandbag Wall (Round)"],["Land_BagFence_End_F","Sandbag Wall (End)"],["Land_SandbagBarricade_01_F","Sandbag Barricade (Tall)"],["Land_SandbagBarricade_01_hole_F","Sandbag Barricade (Tall, Hole)"],["Land_SandbagBarricade_01_half_F","Sandbag Barricade (Short)"],["Land_Barricade_01_4m_F","Junk Barricade (4 m)"],["Land_Barricade_01_10m_F","Junk Barricade (10 m)"],["Land_HBarrier_1_F","H-barrier (Block)"],["Land_HBarrier_3_F","H-barrier (3 Blocks)"],["Land_HBarrier_5_F","H-barrier (5 Blocks)"],["Land_HBarrier_Big_F","H-barrier (Big, 4 Blocks)"],["Land_HBarrierWall_corner_F","H-barrier Wall (Corner)"],["Land_HBarrierWall_corridor_F","H-barrier Corridor"],["Land_HBarrierWall4_F","H-barrier Wall (Short)"],["Land_HBarrierWall6_F","H-barrier Wall (Long)"],["Land_CzechHedgehog_01_new_F","Czech Hedgehog (New)"],["Land_ConcreteHedgehog_01_F","Concrete Hedgehog"],["Land_DragonsTeeth_01_1x1_new_F","Dragon's Tooth (Single, new)"],["Land_Razorwire_F","Razorwire Barrier"],["Land_ConcreteWall_01_l_gate_F","Tall Concrete Wall (Gate)"],["Land_WiredFence_01_gate_F","Medium Wire Fence (Gate)"],["Land_BarGate_F","Bar Gate"],["Land_RoadBarrier_01_F","Bar Gate (v2)"]],
-						
-						[["I_E_HMG_02_high_F","M2 HMG .50 (Raised)"],["I_E_HMG_02_F","M2 HMG .50"],["I_E_HMG_01_high_F","Mk30 HMG .50 (Raised)"],["I_E_HMG_01_F","Mk30 HMG .50"],["I_E_GMG_01_high_F","Mk32 GMG 20 mm (Raised)"],["I_E_GMG_01_F","Mk32 GMG 20 mm"],["I_E_Static_AT_F","Static Titan Launcher (AT)"],["I_E_Static_AA_F","Static Titan Launcher (AA)"]],
-						
-						[["Land_RepairDepot_01_tan_F","Repair depot (Tan)"],["B_Slingload_01_Ammo_F","Huron Ammo Container"],["B_Slingload_01_Fuel_F","Huron Fuel Container"],["B_Slingload_01_Repair_F","Huron Repair Container"],["B_Slingload_01_Medevac_F","Huron Medical Container"]],
-						
-						[["Land_PortableLight_single_F","Portable Lights (Single)"],["Land_PortableLight_double_F","Portable Lights (Double)"],["Land_PortableLight_02_quad_sand_F","Rugged Portable Lamp (Quad, Sand)"],["Land_PortableLight_02_double_sand_F","Rugged Portable Lamp (Double, Sand)"],["Land_PortableLight_02_single_sand_F","Rugged Portable Lamp (Single, Sand)"],["Land_PortableLight_02_single_folded_sand_F","Rugged Portable Lamp (Single, Folded, Sand)"],["Land_LampHalogen_F","Lamp (Halogen)"],["Land_LampStreet_F","Street Lamp"],["Land_LampIndustrial_02_F","Railway Yard Lamp"],["Land_LampShabby_F","Lamp (Shabby)"],["Land_LampHarbour_F","Lamp (Harbor)"]],
-						
-						[["Flag_NATO_F","Flag (NATO)"],["Flag_CSAT_F","Flag (CSAT)"],["Flag_AAF_F","Flag (AAF)"],["Flag_EAF_F","Flag (LDF)"],["Flag_FIA_F","Flag (FIA)"],["Flag_Syndikat_F","Flag (Syndikat)"],["Flag_US_F","Flag (USA)"],["Flag_CTRG_F","Flag (CTRG)"],["Flag_Viper_F","Flag (Viper)"],["Flag_Gendarmerie_F","Flag (Gendarmerie)"],["Flag_IDAP_F","Flag (IDAP)"],["Flag_POWMIA_F","Flag (POW/MIA)"]]
-						];
-						player setVariable ["_indexObjects",_indexObjects];
+			if(isNull _entity || !((typeOf _entity) isKindOf "Man") || !(isPlayer _entity)) exitWith {["Place on players only to enable or disable!","addItemFailed"] call MAZ_EZM_fnc_systemMessage;};
+			
+			["Build Menu Control",[
+				[
+				 "TOOLBOX:ENABLED",
+				 ["Menu Control:","Control access to the Build Menu for the choosen player.\nThe currently selected option on open represents if the player currently has the menu."],
+				 [(_entity getVariable ["LM_var_buildMenuActive",false])]
+				]
+			],{
+				params ["_values","_entity","_display"];
+				_values params ["_menuAccess"];
+				_buildCode =  (str {
+					[(_this select 1), (_this select 3)] spawn {
+						if (((_this select 0) == 48) and (_this select 1)) then {
+							disableSerialization;
+							_buildings = ["Land_GuardTower_01_F","Land_GuardTower_02_F","Land_DeerStand_01_F","Land_DeerStand_02_F"];
+							_bunkers = ["Land_Bunker_02_light_left_F","Land_Bunker_02_light_double_F","Land_Bunker_02_light_right_F","Land_Bunker_01_tall_F","Land_Bunker_01_small_F","Land_Bunker_01_HQ_F","Land_Bunker_01_big_F"];
+							_barricades = ["Land_SandbagBarricade_01_F","Land_SandbagBarricade_01_hole_F","Land_SandbagBarricade_01_half_F","Land_Barricade_01_4m_F","Land_Barricade_01_10m_F","Land_CzechHedgehog_01_new_F","Land_ConcreteHedgehog_01_F","Land_DragonsTeeth_01_1x1_new_F","Land_Razorwire_F","Land_ConcreteWall_01_l_gate_F","Land_WiredFence_01_gate_F","Land_BarGate_F","Land_RoadBarrier_01_F"];
+							_statics = ["I_E_HMG_02_high_F","I_E_HMG_02_F","I_E_HMG_01_high_F","I_E_HMG_01_F","I_E_GMG_01_high_F","I_E_GMG_01_F","I_E_Static_AT_F","I_E_Static_AA_F"];
+							_supplies = ["B_Slingload_01_Ammo_F","B_Slingload_01_Fuel_F","B_Slingload_01_Repair_F","B_Slingload_01_Medevac_F","CargoNet_01_box_F"];
+							_lights = ["Land_PortableLight_single_F","Land_PortableLight_double_F","Land_PortableLight_02_quad_sand_F","Land_PortableLight_02_double_sand_F","Land_PortableLight_02_single_sand_F","Land_PortableLight_02_single_folded_sand_F","Land_LampHalogen_F","Land_LampStreet_F","Land_LampIndustrial_02_F","Land_LampShabby_F","Land_LampHarbour_F"];
+							_flags = ["Flag_NATO_F","Flag_CSAT_F","Flag_AAF_F","Flag_EAF_F","Flag_FIA_F","Flag_Syndikat_F","Flag_US_F","Flag_CTRG_F","Flag_Viper_F","Flag_Gendarmerie_F","Flag_IDAP_F","Flag_POWMIA_F"];
+							
+							if ((worldName == "Tanoa") || (worldName == "Enoch")) then {
+								_buildings = ["Land_Cargo_Tower_V1_F","Land_Cargo_Patrol_V1_F","Land_Cargo_HQ_V1_F","Land_Cargo_House_V1_F"] + _buildings + ["Land_MedicalTent_01_NATO_tropic_generic_open_F","Land_MedicalTent_01_NATO_tropic_generic_outer_F"];
+								_bunkers = ["Land_HBarrier_01_big_tower_green_F","Land_BagBunker_01_small_green_F","Land_HBarrier_01_tower_green_F","Land_BagBunker_01_large_green_F"] + _bunkers;
+								_barricades = ["Land_HBarrier_01_line_1_green_F","Land_HBarrier_01_line_3_green_F","Land_HBarrier_01_line_5_green_F","Land_HBarrier_Big_F","Land_HBarrier_01_wall_corner_green_F","Land_HBarrier_01_wall_corridor_green_F","Land_HBarrier_01_wall_4_green_F","Land_HBarrier_01_wall_6_green_F","Land_BagFence_01_end_green_F","Land_BagFence_01_corner_green_F","Land_BagFence_01_short_green_F","Land_BagFence_01_long_green_F","Land_BagFence_01_round_green_F"] + _barricades;
+								_supplies = ["Land_RepairDepot_01_green_F"] + _supplies;
+							} else {
+								_buildings = ["Land_Cargo_Tower_V3_F","Land_Cargo_Patrol_V3_F","Land_Cargo_HQ_V3_F","Land_Cargo_House_V3_F"] + _buildings + ["Land_MedicalTent_01_NATO_generic_open_F","Land_MedicalTent_01_NATO_generic_outer_F"];
+								_bunkers = ["Land_HBarrierTower_F","Land_BagBunker_Large_F","Land_BagBunker_Small_F","Land_BagBunker_Tower_F"] + _bunkers;
+								_barricades = ["Land_HBarrier_1_F","Land_HBarrier_3_F","Land_HBarrier_5_F","Land_HBarrier_Big_F","Land_HBarrierWall_corner_F","Land_HBarrierWall_corridor_F","Land_HBarrierWall4_F","Land_HBarrierWall6_F","Land_BagFence_End_F","Land_BagFence_Corner_F","Land_BagFence_Short_F","Land_BagFence_Long_F","Land_BagFence_Round_F"] + _barricades;
+								_supplies = ["Land_RepairDepot_01_tan_F"] + _supplies;
+							};
+							
+							_indexObjects = [_buildings,_bunkers,_barricades,_statics,_supplies,_lights,_flags];
+							player setVariable ["_indexObjects",_indexObjects];
 
-						_display = findDisplay 46 createDisplay "RscDisplayEmpty";
-						_ctrlGroup = _display ctrlCreate ["RscControlsGroup", -1];
-						
-						_ctrlBackgroundStatic = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
-							_ctrlBackgroundStatic ctrlSetPosition [0, 0.045, 0.225, 0.5];
-							_ctrlBackgroundStatic ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlBackgroundStatic ctrlEnable false;
-							_ctrlBackgroundStatic ctrlCommit 0;
-						
-						_ctrlTitleStatic = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleStatic ctrlSetText "Build Menu:";
-							_ctrlTitleStatic ctrlSetPosition [0, 0, 0.225, 0.04];
-							_ctrlTitleStatic ctrlSetBackgroundColor LM_trimColor_RGBA;
-							_ctrlTitleStatic ctrlCommit 0;
-						
-						
-						_ctrlFramePreview = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
-							_ctrlFramePreview ctrlSetPosition [0.23, 0.045, 0.3375, 0.25];
-							_ctrlFramePreview ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlFramePreview ctrlEnable false;
-							_ctrlFramePreview ctrlCommit 0;
-						
-						_ctrlTitlePreview = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitlePreview ctrlSetText "Object Preview:";
-							_ctrlTitlePreview ctrlSetPosition [0.23, 0, 0.3375, 0.04];
-							_ctrlTitlePreview ctrlSetBackgroundColor LM_trimColor_RGBA;
-							_ctrlTitlePreview ctrlCommit 0;
-						
-						_ctrlBackgroundPreview = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
-							_ctrlBackgroundPreview ctrlSetPosition [0.24, 0.06, 0.3175, 0.22];
-							_ctrlBackgroundPreview ctrlSetBackgroundColor [0.482,0.518,0.506,1];
-							_ctrlBackgroundPreview ctrlEnable false;
-							_ctrlBackgroundPreview ctrlCommit 0;
-						
-						ctrlPicturePreview = _display ctrlCreate ["RscPicture", -1, _ctrlGroup];
-							if (!((isNil "ctrlObj") and (isNil "placedObj"))) then {
-								if ((alive ctrlObj) and (alive placedObj)) then {
-									ctrlPicturePreview ctrlSetText (getText (configfile >> "CfgVehicles" >> (typeOf placedObj) >> "editorPreview"));
+							_display = (findDisplay 46) createDisplay "RscDisplayEmpty";
+							player setVariable ["LM_var_buildMenuDisplay",_display,0];
+							_ctrlGroup = _display ctrlCreate ["RscControlsGroup", -1];
+							
+							_ctrlBackgroundStatic = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
+								_ctrlBackgroundStatic ctrlSetPosition [0, 0.045, 0.225, 0.5];
+								_ctrlBackgroundStatic ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlBackgroundStatic ctrlEnable false;
+								_ctrlBackgroundStatic ctrlCommit 0;
+							
+							_ctrlTitleStatic = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleStatic ctrlSetText "Build Menu:";
+								_ctrlTitleStatic ctrlSetPosition [0, 0, 0.225, 0.04];
+								_ctrlTitleStatic ctrlSetBackgroundColor LM_trimColor_RGBA;
+								_ctrlTitleStatic ctrlCommit 0;
+							
+							
+							_ctrlFramePreview = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
+								_ctrlFramePreview ctrlSetPosition [0.23, 0.045, 0.3375, 0.25];
+								_ctrlFramePreview ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlFramePreview ctrlEnable false;
+								_ctrlFramePreview ctrlCommit 0;
+							
+							_ctrlTitlePreview = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitlePreview ctrlSetText "Object Preview:";
+								_ctrlTitlePreview ctrlSetPosition [0.23, 0, 0.3375, 0.04];
+								_ctrlTitlePreview ctrlSetBackgroundColor LM_trimColor_RGBA;
+								_ctrlTitlePreview ctrlCommit 0;
+							
+							_ctrlBackgroundPreview = _display ctrlCreate ["RscTextMulti", -1, _ctrlGroup];
+								_ctrlBackgroundPreview ctrlSetPosition [0.24, 0.06, 0.3175, 0.22];
+								_ctrlBackgroundPreview ctrlSetBackgroundColor [0.482,0.518,0.506,1];
+								_ctrlBackgroundPreview ctrlEnable false;
+								_ctrlBackgroundPreview ctrlCommit 0;
+							
+							ctrlPicturePreview = _display ctrlCreate ["RscPicture", -1, _ctrlGroup];
+								if (!((isNil "ctrlObj") and (isNil "placedObj"))) then {
+									if ((alive ctrlObj) and (alive placedObj)) then {
+										ctrlPicturePreview ctrlSetText (getText (configfile >> "CfgVehicles" >> (typeOf placedObj) >> "editorPreview"));
+									} else {
+										ctrlPicturePreview ctrlSetText "";
+									};
 								} else {
 									ctrlPicturePreview ctrlSetText "";
 								};
-							} else {
-								ctrlPicturePreview ctrlSetText "";
+								ctrlPicturePreview ctrlSetPosition [0.24, 0.06, 0.3175, 0.22];
+								ctrlPicturePreview ctrlEnable false;
+								ctrlPicturePreview ctrlCommit 0;
+							
+							
+							_ctrlTitleAmount = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleAmount ctrlSetText "Transform Power:";
+								_ctrlTitleAmount ctrlSetPosition [0.23, 0.3, 0.3375, 0.04];
+								_ctrlTitleAmount ctrlSetBackgroundColor LM_trimColor_RGBA;
+								_ctrlTitleAmount ctrlCommit 0;
+							
+							if (isNil "ctrlSliderPower") then {
+								ctrlSliderPower = 1;
 							};
-							ctrlPicturePreview ctrlSetPosition [0.24, 0.06, 0.3175, 0.22];
-							ctrlPicturePreview ctrlEnable false;
-							ctrlPicturePreview ctrlCommit 0;
-						
-						
-						_ctrlTitleAmount = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleAmount ctrlSetText "Transform Power:";
-							_ctrlTitleAmount ctrlSetPosition [0.23, 0.3, 0.3375, 0.04];
-							_ctrlTitleAmount ctrlSetBackgroundColor LM_trimColor_RGBA;
-							_ctrlTitleAmount ctrlCommit 0;
-						
-						if (isNil "ctrlSliderPower") then {
-							ctrlSliderPower = 1;
-						};
-						ctrlSliderAmount = _display ctrlCreate ["RscXSliderH", -1, _ctrlGroup];
-							ctrlSliderAmount ctrlSetTooltip "Use Slider to Control How Much '-' and '+' Buttons Affect Object";
-							ctrlSliderAmount ctrlSetPosition [0.23, 0.345, 0.2825, 0.04];
-							ctrlSliderAmount ctrlSetBackgroundColor [0,0,0,0.6];
-							ctrlSliderAmount ctrlCommit 0;
-							ctrlSliderAmount sliderSetRange [1, 359];
-							ctrlSliderAmount sliderSetSpeed [1, 1];
-							ctrlSliderAmount sliderSetPosition 1;
-							ctrlSliderAmount ctrlAddEventHandler ["sliderPosChanged", {
-								params ["_ctrlSlider", "_value"];
-								_ctrlSlider sliderSetPosition (round _value);
-								ctrlButtonAmount ctrlSetText str(sliderPosition _ctrlSlider);
-								ctrlSliderPower = (round _value);
-							}];
+							ctrlSliderAmount = _display ctrlCreate ["RscXSliderH", -1, _ctrlGroup];
+								ctrlSliderAmount ctrlSetTooltip "Use Slider to Control How Much '-' and '+' Buttons Affect Object";
+								ctrlSliderAmount ctrlSetPosition [0.23, 0.345, 0.2825, 0.04];
+								ctrlSliderAmount ctrlSetBackgroundColor [0,0,0,0.6];
+								ctrlSliderAmount ctrlCommit 0;
+								ctrlSliderAmount sliderSetRange [1, 359];
+								ctrlSliderAmount sliderSetSpeed [1, 1];
+								ctrlSliderAmount sliderSetPosition 1;
+								ctrlSliderAmount ctrlAddEventHandler ["sliderPosChanged", {
+									params ["_ctrlSlider", "_value"];
+									_ctrlSlider sliderSetPosition (round _value);
+									ctrlButtonAmount ctrlSetText str(sliderPosition _ctrlSlider);
+									ctrlSliderPower = (round _value);
+								}];
+								
+							ctrlButtonAmount = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								ctrlButtonAmount ctrlSetPosition [0.5175, 0.345, 0.05, 0.04];
+								ctrlButtonAmount ctrlSetText str(sliderPosition ctrlSliderAmount);
+								ctrlButtonAmount ctrlSetBackgroundColor [0,0,0,0.4];
+								ctrlButtonAmount ctrlSetActiveColor [0,0,0,0.6];
+								ctrlButtonAmount ctrlCommit 0;
 							
-						ctrlButtonAmount = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							ctrlButtonAmount ctrlSetPosition [0.5175, 0.345, 0.05, 0.04];
-							ctrlButtonAmount ctrlSetText str(sliderPosition ctrlSliderAmount);
-							ctrlButtonAmount ctrlSetBackgroundColor [0,0,0,0.4];
-							ctrlButtonAmount ctrlSetActiveColor [0,0,0,0.6];
-							ctrlButtonAmount ctrlCommit 0;
-						
-						
-						mainMenu = {
-							params ["_control"];
-							_control ctrlRemoveAllEventHandlers "LBDblClick";
-							lbClear _control;
 							
-							_control lbAdd "Buildings";
-							_control lbAdd "Bunkers";
-							_control lbAdd "Barricades";
-							_control lbAdd "Statics";
-							_control lbAdd "Supplies";
-							_control lbAdd "Lights";
-							_control lbAdd "Flags";
-							
-							_control ctrlAddEventHandler ["LBDblClick", {
-								params ["_control", "_selectedIndex"];
-								[_control, _selectedIndex] call objMenu;
-							}];
-							_control lbSetCurSel 0;
-						};
-						
-						objMenu = {
-							params ["_control", "_selectedIndex"];
-							_control ctrlRemoveAllEventHandlers "LBDblClick";
-							lbClear _control;
-							
-							_control lbAdd "[Main Menu]";
-							_control lbSetColor [0, LM_trimColor_RGBA];
-							if (_selectedIndex == 0) then {
-								player setVariable ["_objectFunction",0];
-							} else {
-								if (_selectedIndex == 1) then {
-									player setVariable ["_objectFunction",1];
-								} else {
-									if (_selectedIndex == 2) then {
-										player setVariable ["_objectFunction",2];
+							LM_fnc_deletePlacedObject = {
+								_obj = cursorObject;
+								if (!(_obj == objNull)) then {
+									if ((_obj getVariable ["LM_var_objOwner", objNull]) == player) then {
+										deleteVehicle _obj;
+										systemChat "[ LOG ] Object you were looking at which was placed earlier by you, is now deleted!";
+										playSound "3DEN_notificationDefault";
 									} else {
-										if (_selectedIndex == 3) then {
-											player setVariable ["_objectFunction",3];
+										systemChat "[ LOG ] You cannot delete objects you are looking at, that you did not originally place!";
+										playSound "3DEN_notificationWarning";
+									};
+								} else {
+									systemChat "[ LOG ] Please select an object first!";
+									playSound "3DEN_notificationWarning";
+								};
+							};
+							
+							mainMenu = {
+								params ["_control"];
+								_control ctrlRemoveAllEventHandlers "LBDblClick";
+								lbClear _control;
+								
+								_control lbAdd "Buildings";
+								_control lbAdd "Bunkers";
+								_control lbAdd "Barricades";
+								_control lbAdd "Statics";
+								_control lbAdd "Supplies";
+								_control lbAdd "Lights";
+								_control lbAdd "Flags";
+								
+								_control ctrlAddEventHandler ["LBDblClick", {
+									params ["_control", "_selectedIndex"];
+									[_control, _selectedIndex] call objMenu;
+								}];
+								_control lbSetCurSel 0;
+							};
+							
+							objMenu = {
+								params ["_control", "_selectedIndex"];
+								_control ctrlRemoveAllEventHandlers "LBDblClick";
+								lbClear _control;
+								
+								_control lbAdd "[Main Menu]";
+								_control lbSetColor [0, LM_trimColor_RGBA];
+								if (_selectedIndex == 0) then {
+									player setVariable ["_objectFunction",0];
+								} else {
+									if (_selectedIndex == 1) then {
+										player setVariable ["_objectFunction",1];
+									} else {
+										if (_selectedIndex == 2) then {
+											player setVariable ["_objectFunction",2];
 										} else {
-											if (_selectedIndex == 4) then {
-												player setVariable ["_objectFunction",4];
+											if (_selectedIndex == 3) then {
+												player setVariable ["_objectFunction",3];
 											} else {
-												if (_selectedIndex == 5) then {
-													player setVariable ["_objectFunction",5];
+												if (_selectedIndex == 4) then {
+													player setVariable ["_objectFunction",4];
 												} else {
-													player setVariable ["_objectFunction",6];
+													if (_selectedIndex == 5) then {
+														player setVariable ["_objectFunction",5];
+													} else {
+														player setVariable ["_objectFunction",6];
+													};
 												};
 											};
 										};
 									};
 								};
-							};
-							_index = 0;
-							{
-								_index = _index + 1;
-								_control lbAdd (_x select 1);
-								_control lbSetTooltip [_index, (_x select 1)];
-							} forEach ((player getVariable "_indexObjects") select (player getVariable "_objectFunction"));
-							
-							_control ctrlAddEventHandler ["LBSelChanged", {
-								params ["_control", "_lbCurSel", "_lbSelection"];
-								if (_lbCurSel == 0) then {
-									ctrlPicturePreview ctrlSetText "";
-								} else {
-									_objectInformation = ((player getVariable "_indexObjects") select (player getVariable "_objectFunction")) select (_lbCurSel - 1);
-									if (!((_control lbText _lbCurSel) == (_objectInformation select 1))) then {
+								_index = 0;
+								{
+									_index = _index + 1;
+									_control lbAdd (getText (configFile >> "CfgVehicles" >> _x >> "displayName"));
+									_control lbSetTooltip [_index, (getText (configFile >> "CfgVehicles" >> _x >> "displayName"))];
+								} forEach ((player getVariable "_indexObjects") select (player getVariable "_objectFunction"));
+								
+								_control ctrlAddEventHandler ["LBSelChanged", {
+									params ["_control", "_lbCurSel", "_lbSelection"];
+									if (_lbCurSel == 0) then {
 										ctrlPicturePreview ctrlSetText "";
 									} else {
-										ctrlPicturePreview ctrlSetText (getText (configfile >> "CfgVehicles" >> (_objectInformation select 0) >> "editorPreview"));
-									};
-								};
-							}];
-							
-							_control ctrlAddEventHandler ["LBDblClick", {
-								params ["_control", "_selectedIndex"];
-								if (_selectedIndex == 0) then {
-									[_control] call mainMenu;
-								} else {
-									_objectInformation = ((player getVariable "_indexObjects") select (player getVariable "_objectFunction")) select (_selectedIndex - 1);
-									deleteVehicle placedObj;
-									deleteVehicle ctrlObj;
-									objYaw = 0; objPitch = 0; objRoll = 0;
-									ctrlObj = (([getPosASL player, ("Land_HelipadEmpty_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
-									placedObj = (([[ctrlObj, "TOP"], (_objectInformation select 0), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
-									placedObj setVehicleLock "LOCKED";
-									placedObjDim = boundingBox placedObj;
-									[placedObj, ctrlObj] call BIS_fnc_attachToRelative;
-									if (abs (placedObjDim select 2) > 10) then {
-										ctrlObj attachTo [player, [0, (abs (placedObjDim select 2) + 5), 0]];
-									} else {
-										ctrlObj attachTo [player, [0, (abs (placedObjDim select 2) + 2.5), 0]];
-									};
-									playSound "3DEN_notificationDefault";
-									[ 
-										"<t color='#FFFFFF' align='center' size='0.4' font='PuristaBold' shadow='1'>Increase '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">SHIFT</t>' || Decrease '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">ALT</t>'<br/>X-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">[</t>' || Y-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">]</t>' || Z-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">\</t>' || Height '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">-</t>' || Distance '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">=</t>'</t>", 
-										0,
-										safeZoneY+0.025, 
-										99999, 
-										2, 
-										0, 
-										3093 
-									] spawn bis_fnc_dynamicText;
-								};
-							}];
-						};
-						
-						_ctrlListboxStatic = _display ctrlCreate ["RscListbox", -1, _ctrlGroup];
-						_ctrlListboxStatic ctrlSetPosition [0.01, 0.06, 0.2025, 0.47];
-						_ctrlListboxStatic ctrlAddEventHandler ["LBDblClick", {
-							params ["_control", "_selectedIndex"];
-							[_control, _selectedIndex] call objMenu;
-						}];
-						[_ctrlListboxStatic] call mainMenu;
-						_ctrlListboxStatic ctrlCommit 0;
-						
-						findDisplay 0 displayCtrl 999 setVariable ['_ctrlListboxStatic', _ctrlListboxStatic];
-						ctrlSetFocus _ctrlListboxStatic;
-						
-						
-						LM_buildMenu_pitch = {
-							if (!(isNil "ctrlObj")) then {
-								if (alive ctrlObj) then {
-									if ((_this select 0)) then {
-										objPitch = objPitch + ctrlSliderPower;
-									} else {
-										objPitch = objPitch - ctrlSliderPower;
-									};
-									_y = objYaw; _p = objPitch; _r = objRoll;  
-									ctrlObj setVectorDirAndUp [  
-										[sin _y * cos _p, cos _y * cos _p, sin _p],  
-										[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
-									];
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-							} else {
-								systemChat "[ LOG ] Please select an object first!";
-								playSound "3DEN_notificationWarning";
-							};
-						};
-						_ctrlTitlePitch = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitlePitch ctrlSetText "X-Axis:";
-							_ctrlTitlePitch ctrlSetTooltip "Pitch";
-							_ctrlTitlePitch ctrlSetPosition [0, 0.55, 0.135, 0.04];
-							_ctrlTitlePitch ctrlSetBackgroundColor [0,0,0,0.6];
-							_ctrlTitlePitch ctrlCommit 0;
-							
-							_ctrlButtonPitchNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonPitchNeg ctrlSetPosition [0.14, 0.55, 0.04, 0.04];
-							_ctrlButtonPitchNeg ctrlSetText "-";
-							_ctrlButtonPitchNeg ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonPitchNeg ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonPitchNeg ctrlAddEventHandler ["ButtonClick", {
-								[false] call LM_buildMenu_pitch;
-							}];
-							_ctrlButtonPitchNeg ctrlCommit 0;
-							
-							_ctrlButtonPitchPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonPitchPos ctrlSetPosition [0.185, 0.55, 0.04, 0.04];
-							_ctrlButtonPitchPos ctrlSetText "+";
-							_ctrlButtonPitchPos ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonPitchPos ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonPitchPos ctrlAddEventHandler ["ButtonClick", {
-								[true] call LM_buildMenu_pitch;
-							}];
-							_ctrlButtonPitchPos ctrlCommit 0;
-						
-						
-						LM_buildMenu_roll = {
-							if (!(isNil "ctrlObj")) then {
-								if (alive ctrlObj) then {
-									if ((_this select 0)) then {
-										objRoll = objRoll + ctrlSliderPower;
-									} else {
-										objRoll = objRoll - ctrlSliderPower;
-									};
-									_y = objYaw; _p = objPitch; _r = objRoll;  
-									ctrlObj setVectorDirAndUp [  
-										[sin _y * cos _p, cos _y * cos _p, sin _p],  
-										[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
-									];
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-							} else {
-								systemChat "[ LOG ] Please select an object first!";
-								playSound "3DEN_notificationWarning";
-							};
-						};
-						_ctrlTitleRoll = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleRoll ctrlSetText "Y-Axis:";
-							_ctrlTitleRoll ctrlSetTooltip "Roll";
-							_ctrlTitleRoll ctrlSetPosition [0, 0.595, 0.135, 0.04];
-							_ctrlTitleRoll ctrlSetBackgroundColor [0,0,0,0.6];
-							_ctrlTitleRoll ctrlCommit 0;
-							
-							_ctrlButtonRollNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonRollNeg ctrlSetPosition [0.14, 0.595, 0.04, 0.04];
-							_ctrlButtonRollNeg ctrlSetText "-";
-							_ctrlButtonRollNeg ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonRollNeg ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonRollNeg ctrlAddEventHandler ["ButtonClick", {
-								[false] call LM_buildMenu_roll;
-							}];
-							_ctrlButtonRollNeg ctrlCommit 0;
-							
-							_ctrlButtonRollPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonRollPos ctrlSetPosition [0.185, 0.595, 0.04, 0.04];
-							_ctrlButtonRollPos ctrlSetText "+";
-							_ctrlButtonRollPos ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonRollPos ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonRollPos ctrlAddEventHandler ["ButtonClick", {
-								[true] call LM_buildMenu_roll;
-							}];
-							_ctrlButtonRollPos ctrlCommit 0;
-						
-						
-						LM_buildMenu_yaw = {
-							if (!(isNil "ctrlObj")) then {
-								if (alive ctrlObj) then {
-									if ((_this select 0)) then {
-										objYaw = objYaw + ctrlSliderPower;
-									} else {
-										objYaw = objYaw - ctrlSliderPower;
-									};
-									_y = objYaw; _p = objPitch; _r = objRoll;  
-									ctrlObj setVectorDirAndUp [  
-										[sin _y * cos _p, cos _y * cos _p, sin _p],  
-										[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
-									];
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-							} else {
-								systemChat "[ LOG ] Please select an object first!";
-								playSound "3DEN_notificationWarning";
-							};
-						};
-						_ctrlTitleYaw = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleYaw ctrlSetText "Z-Axis:";
-							_ctrlTitleYaw ctrlSetTooltip "Yaw";
-							_ctrlTitleYaw ctrlSetPosition [0, 0.64, 0.135, 0.04];
-							_ctrlTitleYaw ctrlSetBackgroundColor [0,0,0,0.6];
-							_ctrlTitleYaw ctrlCommit 0;
-							
-							_ctrlButtonYawNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonYawNeg ctrlSetPosition [0.14, 0.64, 0.04, 0.04];
-							_ctrlButtonYawNeg ctrlSetText "-";
-							_ctrlButtonYawNeg ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonYawNeg ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonYawNeg ctrlAddEventHandler ["ButtonClick", {
-								[false] call LM_buildMenu_yaw;
-							}];
-							_ctrlButtonYawNeg ctrlCommit 0;
-							
-							_ctrlButtonYawPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonYawPos ctrlSetPosition [0.185, 0.64, 0.04, 0.04];
-							_ctrlButtonYawPos ctrlSetText "+";
-							_ctrlButtonYawPos ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonYawPos ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonYawPos ctrlAddEventHandler ["ButtonClick", {
-								[true] call LM_buildMenu_yaw;
-							}];
-							_ctrlButtonYawPos ctrlCommit 0;
-						
-						
-						LM_buildMenu_height = {
-							if (!(isNil "ctrlObj")) then {
-								if (alive ctrlObj) then {
-									detach player;
-									if ((_this select 0)) then {
-										ctrlObj setPos (ctrlObj modelToWorld [0,0,ctrlSliderPower]);
-									} else {
-										ctrlObj setPos (ctrlObj modelToWorld [0,0,-(ctrlSliderPower)]);
-									};
-									[ctrlObj, player] call BIS_fnc_attachToRelative;
-									_y = objYaw; _p = objPitch; _r = objRoll;  
-									ctrlObj setVectorDirAndUp [  
-										[sin _y * cos _p, cos _y * cos _p, sin _p],  
-										[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
-									];
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-							} else {
-								systemChat "[ LOG ] Please select an object first!";
-								playSound "3DEN_notificationWarning";
-							};
-						};
-						_ctrlTitleHeight = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleHeight ctrlSetText "Height:";
-							_ctrlTitleHeight ctrlSetPosition [0, 0.685, 0.135, 0.04];
-							_ctrlTitleHeight ctrlSetBackgroundColor [0,0,0,0.6];
-							_ctrlTitleHeight ctrlCommit 0;
-							
-							_ctrlButtonHeightNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonHeightNeg ctrlSetPosition [0.14, 0.685, 0.04, 0.04];
-							_ctrlButtonHeightNeg ctrlSetText "-";
-							_ctrlButtonHeightNeg ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonHeightNeg ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonHeightNeg ctrlAddEventHandler ["ButtonClick", {
-								[false] call LM_buildMenu_height;
-							}];
-							_ctrlButtonHeightNeg ctrlCommit 0;
-							
-							_ctrlButtonHeightPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonHeightPos ctrlSetPosition [0.185, 0.685, 0.04, 0.04];
-							_ctrlButtonHeightPos ctrlSetText "+";
-							_ctrlButtonHeightPos ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonHeightPos ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonHeightPos ctrlAddEventHandler ["ButtonClick", {
-								[true] call LM_buildMenu_height;
-							}];
-							_ctrlButtonHeightPos ctrlCommit 0;
-						
-						
-						LM_buildMenu_distance = {
-							if (!(isNil "ctrlObj")) then {
-								if (alive ctrlObj) then {
-									detach player;
-									if ((_this select 0)) then {
-										ctrlObj setPos (ctrlObj modelToWorld [0,ctrlSliderPower,0]);
-									} else {
-										ctrlObj setPos (ctrlObj modelToWorld [0,-(ctrlSliderPower),0]);
-									};
-									[ctrlObj, player] call BIS_fnc_attachToRelative;
-									_y = objYaw; _p = objPitch; _r = objRoll;  
-									ctrlObj setVectorDirAndUp [  
-										[sin _y * cos _p, cos _y * cos _p, sin _p],  
-										[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
-									];
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-							} else {
-								systemChat "[ LOG ] Please select an object first!";
-								playSound "3DEN_notificationWarning";
-							};
-						};
-						_ctrlTitleDistance = _display ctrlCreate ["RscText", -1, _ctrlGroup];
-							_ctrlTitleDistance ctrlSetText "Distance:";
-							_ctrlTitleDistance ctrlSetPosition [0, 0.73, 0.135, 0.04];
-							_ctrlTitleDistance ctrlSetBackgroundColor [0,0,0,0.6];
-							_ctrlTitleDistance ctrlCommit 0;
-							
-							_ctrlButtonDistanceNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonDistanceNeg ctrlSetPosition [0.14, 0.73, 0.04, 0.04];
-							_ctrlButtonDistanceNeg ctrlSetText "-";
-							_ctrlButtonDistanceNeg ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonDistanceNeg ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonDistanceNeg ctrlAddEventHandler ["ButtonClick", {
-								[false] call LM_buildMenu_distance;
-							}];
-							_ctrlButtonDistanceNeg ctrlCommit 0;
-							
-							_ctrlButtonDistancePos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonDistancePos ctrlSetPosition [0.185, 0.73, 0.04, 0.04];
-							_ctrlButtonDistancePos ctrlSetText "+";
-							_ctrlButtonDistancePos ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonDistancePos ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonDistancePos ctrlAddEventHandler ["ButtonClick", {
-								[true] call LM_buildMenu_distance;
-							}];
-							_ctrlButtonDistancePos ctrlCommit 0;
-							
-							
-						_ctrlButtonAlign = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonAlign ctrlSetPosition [0, 0.775, 0.225, 0.04];
-							_ctrlButtonAlign ctrlSetText "Surface Align";
-							_ctrlButtonAlign ctrlSetTooltip "Align Object to Below Surface";
-							_ctrlButtonAlign ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonAlign ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonAlign ctrlAddEventHandler ["ButtonClick", {
-								if (!(isNil "ctrlObj")) then {
-									if (alive ctrlObj) then {
-										detach placedObj;
-										placedObj setVectorUp surfaceNormal position placedObj;
-										[placedObj, ctrlObj] call BIS_fnc_attachToRelative;
-									} else {
-										systemChat "[ LOG ] Please select an object first!";
-										playSound "3DEN_notificationWarning";
-									};
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-
-							}];
-							_ctrlButtonAlign ctrlCommit 0;
-							
-							
-						_ctrlButtonSnap = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonSnap ctrlSetPosition [0, 0.82, 0.225, 0.04];
-							_ctrlButtonSnap ctrlSetText "Surface Place";
-							_ctrlButtonSnap ctrlSetTooltip "Place Object aligned with and on the Ground";
-							_ctrlButtonSnap ctrlSetTextColor LM_trimColor_RGBA;
-							_ctrlButtonSnap ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonSnap ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonSnap ctrlAddEventHandler ["ButtonClick", {
-								if (!(isNil "ctrlObj")) then {
-									if (alive ctrlObj) then {
-										if (speed player == 0) then {
-											detach placedObj;
-											placedObj setVehicleLock "UNLOCKED";
-											placedObj setPos [((position placedObj) select 0), ((position placedObj) select 1), 0];
-											placedObj setVectorUp surfaceNormal position placedObj;
-											deleteVehicle ctrlObj;
-											placedObj = ctrlObj;
-											objYaw = 0; objPitch = 0; objRoll = 0;
+										_objectInformation = ((player getVariable "_indexObjects") select (player getVariable "_objectFunction")) select (_lbCurSel - 1);
+										if (!((_control lbText _lbCurSel) == (getText (configFile >> "CfgVehicles" >> _objectInformation >> "displayName")))) then {
 											ctrlPicturePreview ctrlSetText "";
-											playSound "3DEN_notificationDefault";
-											[ 
-												"", 
-												0,
-												safeZoneY+0.025, 
-												99999, 
-												2, 
-												0, 
-												3093 
-											] spawn bis_fnc_dynamicText;
-											[placedObj, true] remoteExec ["enableDynamicSimulation", 0, true];
 										} else {
-											systemChat "[ LOG ] To place an object you must not be moving!";
-											playSound "3DEN_notificationWarning";
+											ctrlPicturePreview ctrlSetText (getText (configfile >> "CfgVehicles" >> _objectInformation >> "editorPreview"));
 										};
-									} else {
-										systemChat "[ LOG ] Please select an object first!";
-										playSound "3DEN_notificationWarning";
 									};
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-
-							}];
-							_ctrlButtonSnap ctrlCommit 0;
-							
-							
-						_ctrlButtonPlace = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonPlace ctrlSetPosition [0, 0.865, 0.225, 0.04];
-							_ctrlButtonPlace ctrlSetText "Position Place";
-							_ctrlButtonPlace ctrlSetTooltip "Place Object in its Current Position";
-							_ctrlButtonPlace ctrlSetTextColor LM_trimColor_RGBA;
-							_ctrlButtonPlace ctrlSetBackgroundColor [0,0,0,0.4];
-							_ctrlButtonPlace ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonPlace ctrlAddEventHandler ["ButtonClick", {
-								if (!(isNil "ctrlObj")) then {
-									if (alive ctrlObj) then {
-										if (speed player == 0) then {
-											detach placedObj;
-											placedObj setVehicleLock "UNLOCKED";
-											deleteVehicle ctrlObj;
-											placedObj = ctrlObj;
-											objYaw = 0; objPitch = 0; objRoll = 0;
-											ctrlPicturePreview ctrlSetText "";
-											playSound "3DEN_notificationDefault";
-											[ 
-												"", 
-												0,
-												safeZoneY+0.025, 
-												99999, 
-												2, 
-												0, 
-												3093 
-											] spawn bis_fnc_dynamicText;
-											[placedObj, true] remoteExec ["enableDynamicSimulation", 0, true];
-										} else {
-											systemChat "[ LOG ] To place an object you must not be moving!";
-											playSound "3DEN_notificationWarning";
-										};
+								}];
+								
+								_control ctrlAddEventHandler ["LBDblClick", {
+									params ["_control", "_selectedIndex"];
+									if (_selectedIndex == 0) then {
+										[_control] call mainMenu;
 									} else {
-										systemChat "[ LOG ] Please select an object first!";
-										playSound "3DEN_notificationWarning";
-									};
-								} else {
-									systemChat "[ LOG ] Please select an object first!";
-									playSound "3DEN_notificationWarning";
-								};
-
-							}];
-							_ctrlButtonPlace ctrlCommit 0;
-							
-							
-						_ctrlButtonDelete = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
-							_ctrlButtonDelete ctrlSetPosition [0, 0.91, 0.225, 0.04];
-							_ctrlButtonDelete ctrlSetText "Delete Object";
-							_ctrlButtonDelete ctrlSetBackgroundColor [0.5,0,0,1];
-							_ctrlButtonDelete ctrlSetActiveColor [0,0,0,0.6];
-							_ctrlButtonDelete ctrlAddEventHandler ["ButtonClick", {
-								if (!(isNil "ctrlObj")) then {
-									deleteVehicle placedObj;
-									if (alive ctrlObj) then {
+										_objectInformation = ((player getVariable "_indexObjects") select (player getVariable "_objectFunction")) select (_selectedIndex - 1);
+										deleteVehicle placedObj;
 										deleteVehicle ctrlObj;
 										objYaw = 0; objPitch = 0; objRoll = 0;
-										ctrlPicturePreview ctrlSetText "";
+										ctrlObj = (([getPosASL player, ("Land_HelipadEmpty_F"), 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+										placedObj = (([[ctrlObj, "TOP"], _objectInformation, 1, [0,0,0],0,{0},true] call BIS_fnc_spawnObjects) select 0);
+										placedObj setVariable ["LM_var_objOwner", player, 0];
+										placedObj setVehicleLock "LOCKED";
+										placedObjDim = boundingBox placedObj;
+										[placedObj, ctrlObj] call BIS_fnc_attachToRelative;
+										if (abs (placedObjDim select 2) > 10) then {
+											ctrlObj attachTo [player, [0, (abs (placedObjDim select 2) + 5), 0]];
+										} else {
+											ctrlObj attachTo [player, [0, (abs (placedObjDim select 2) + 2.5), 0]];
+										};
 										playSound "3DEN_notificationDefault";
 										[ 
-											"", 
+											"<t color='#FFFFFF' align='center' size='0.4' font='PuristaBold' shadow='1'>Increase '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">SHIFT</t>' || Decrease '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">ALT</t>'<br/>X-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">[</t>' || Y-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">]</t>' || Z-Axis '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">\</t>' || Height '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">-</t>' || Distance '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">=</t>'</t>", 
 											0,
 											safeZoneY+0.025, 
 											99999, 
@@ -23394,6 +23079,36 @@ MAZ_EZM_fnc_initFunction = {
 											0, 
 											3093 
 										] spawn bis_fnc_dynamicText;
+									};
+								}];
+							};
+							
+							_ctrlListboxStatic = _display ctrlCreate ["RscListbox", -1, _ctrlGroup];
+							_ctrlListboxStatic ctrlSetPosition [0.01, 0.06, 0.2025, 0.47];
+							_ctrlListboxStatic ctrlAddEventHandler ["LBDblClick", {
+								params ["_control", "_selectedIndex"];
+								[_control, _selectedIndex] call objMenu;
+							}];
+							[_ctrlListboxStatic] call mainMenu;
+							_ctrlListboxStatic ctrlCommit 0;
+							
+							findDisplay 0 displayCtrl 999 setVariable ['_ctrlListboxStatic', _ctrlListboxStatic];
+							ctrlSetFocus _ctrlListboxStatic;
+							
+							
+							LM_buildMenu_pitch = {
+								if (!(isNil "ctrlObj")) then {
+									if (alive ctrlObj) then {
+										if ((_this select 0)) then {
+											objPitch = objPitch + ctrlSliderPower;
+										} else {
+											objPitch = objPitch - ctrlSliderPower;
+										};
+										_y = objYaw; _p = objPitch; _r = objRoll;  
+										ctrlObj setVectorDirAndUp [  
+											[sin _y * cos _p, cos _y * cos _p, sin _p],  
+											[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
+										];
 									} else {
 										systemChat "[ LOG ] Please select an object first!";
 										playSound "3DEN_notificationWarning";
@@ -23402,16 +23117,499 @@ MAZ_EZM_fnc_initFunction = {
 									systemChat "[ LOG ] Please select an object first!";
 									playSound "3DEN_notificationWarning";
 								};
+							};
+							_ctrlTitlePitch = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitlePitch ctrlSetText "X-Axis:";
+								_ctrlTitlePitch ctrlSetTooltip "Pitch";
+								_ctrlTitlePitch ctrlSetPosition [0, 0.55, 0.135, 0.04];
+								_ctrlTitlePitch ctrlSetBackgroundColor [0,0,0,0.6];
+								_ctrlTitlePitch ctrlCommit 0;
+								
+								_ctrlButtonPitchNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonPitchNeg ctrlSetPosition [0.14, 0.55, 0.04, 0.04];
+								_ctrlButtonPitchNeg ctrlSetText "-";
+								_ctrlButtonPitchNeg ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonPitchNeg ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonPitchNeg ctrlAddEventHandler ["ButtonClick", {
+									[false] call LM_buildMenu_pitch;
+								}];
+								_ctrlButtonPitchNeg ctrlCommit 0;
+								
+								_ctrlButtonPitchPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonPitchPos ctrlSetPosition [0.185, 0.55, 0.04, 0.04];
+								_ctrlButtonPitchPos ctrlSetText "+";
+								_ctrlButtonPitchPos ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonPitchPos ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonPitchPos ctrlAddEventHandler ["ButtonClick", {
+									[true] call LM_buildMenu_pitch;
+								}];
+								_ctrlButtonPitchPos ctrlCommit 0;
+							
+							
+							LM_buildMenu_roll = {
+								if (!(isNil "ctrlObj")) then {
+									if (alive ctrlObj) then {
+										if ((_this select 0)) then {
+											objRoll = objRoll + ctrlSliderPower;
+										} else {
+											objRoll = objRoll - ctrlSliderPower;
+										};
+										_y = objYaw; _p = objPitch; _r = objRoll;  
+										ctrlObj setVectorDirAndUp [  
+											[sin _y * cos _p, cos _y * cos _p, sin _p],  
+											[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
+										];
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+								} else {
+									systemChat "[ LOG ] Please select an object first!";
+									playSound "3DEN_notificationWarning";
+								};
+							};
+							_ctrlTitleRoll = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleRoll ctrlSetText "Y-Axis:";
+								_ctrlTitleRoll ctrlSetTooltip "Roll";
+								_ctrlTitleRoll ctrlSetPosition [0, 0.595, 0.135, 0.04];
+								_ctrlTitleRoll ctrlSetBackgroundColor [0,0,0,0.6];
+								_ctrlTitleRoll ctrlCommit 0;
+								
+								_ctrlButtonRollNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonRollNeg ctrlSetPosition [0.14, 0.595, 0.04, 0.04];
+								_ctrlButtonRollNeg ctrlSetText "-";
+								_ctrlButtonRollNeg ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonRollNeg ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonRollNeg ctrlAddEventHandler ["ButtonClick", {
+									[false] call LM_buildMenu_roll;
+								}];
+								_ctrlButtonRollNeg ctrlCommit 0;
+								
+								_ctrlButtonRollPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonRollPos ctrlSetPosition [0.185, 0.595, 0.04, 0.04];
+								_ctrlButtonRollPos ctrlSetText "+";
+								_ctrlButtonRollPos ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonRollPos ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonRollPos ctrlAddEventHandler ["ButtonClick", {
+									[true] call LM_buildMenu_roll;
+								}];
+								_ctrlButtonRollPos ctrlCommit 0;
+							
+							
+							LM_buildMenu_yaw = {
+								if (!(isNil "ctrlObj")) then {
+									if (alive ctrlObj) then {
+										if ((_this select 0)) then {
+											objYaw = objYaw + ctrlSliderPower;
+										} else {
+											objYaw = objYaw - ctrlSliderPower;
+										};
+										_y = objYaw; _p = objPitch; _r = objRoll;  
+										ctrlObj setVectorDirAndUp [  
+											[sin _y * cos _p, cos _y * cos _p, sin _p],  
+											[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
+										];
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+								} else {
+									systemChat "[ LOG ] Please select an object first!";
+									playSound "3DEN_notificationWarning";
+								};
+							};
+							_ctrlTitleYaw = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleYaw ctrlSetText "Z-Axis:";
+								_ctrlTitleYaw ctrlSetTooltip "Yaw";
+								_ctrlTitleYaw ctrlSetPosition [0, 0.64, 0.135, 0.04];
+								_ctrlTitleYaw ctrlSetBackgroundColor [0,0,0,0.6];
+								_ctrlTitleYaw ctrlCommit 0;
+								
+								_ctrlButtonYawNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonYawNeg ctrlSetPosition [0.14, 0.64, 0.04, 0.04];
+								_ctrlButtonYawNeg ctrlSetText "-";
+								_ctrlButtonYawNeg ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonYawNeg ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonYawNeg ctrlAddEventHandler ["ButtonClick", {
+									[false] call LM_buildMenu_yaw;
+								}];
+								_ctrlButtonYawNeg ctrlCommit 0;
+								
+								_ctrlButtonYawPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonYawPos ctrlSetPosition [0.185, 0.64, 0.04, 0.04];
+								_ctrlButtonYawPos ctrlSetText "+";
+								_ctrlButtonYawPos ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonYawPos ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonYawPos ctrlAddEventHandler ["ButtonClick", {
+									[true] call LM_buildMenu_yaw;
+								}];
+								_ctrlButtonYawPos ctrlCommit 0;
+							
+							
+							LM_buildMenu_height = {
+								if (!(isNil "ctrlObj")) then {
+									if (alive ctrlObj) then {
+										detach player;
+										if ((_this select 0)) then {
+											ctrlObj setPos (ctrlObj modelToWorld [0,0,ctrlSliderPower]);
+										} else {
+											ctrlObj setPos (ctrlObj modelToWorld [0,0,-(ctrlSliderPower)]);
+										};
+										[ctrlObj, player] call BIS_fnc_attachToRelative;
+										_y = objYaw; _p = objPitch; _r = objRoll;  
+										ctrlObj setVectorDirAndUp [  
+											[sin _y * cos _p, cos _y * cos _p, sin _p],  
+											[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
+										];
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+								} else {
+									systemChat "[ LOG ] Please select an object first!";
+									playSound "3DEN_notificationWarning";
+								};
+							};
+							_ctrlTitleHeight = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleHeight ctrlSetText "Height:";
+								_ctrlTitleHeight ctrlSetPosition [0, 0.685, 0.135, 0.04];
+								_ctrlTitleHeight ctrlSetBackgroundColor [0,0,0,0.6];
+								_ctrlTitleHeight ctrlCommit 0;
+								
+								_ctrlButtonHeightNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonHeightNeg ctrlSetPosition [0.14, 0.685, 0.04, 0.04];
+								_ctrlButtonHeightNeg ctrlSetText "-";
+								_ctrlButtonHeightNeg ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonHeightNeg ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonHeightNeg ctrlAddEventHandler ["ButtonClick", {
+									[false] call LM_buildMenu_height;
+								}];
+								_ctrlButtonHeightNeg ctrlCommit 0;
+								
+								_ctrlButtonHeightPos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonHeightPos ctrlSetPosition [0.185, 0.685, 0.04, 0.04];
+								_ctrlButtonHeightPos ctrlSetText "+";
+								_ctrlButtonHeightPos ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonHeightPos ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonHeightPos ctrlAddEventHandler ["ButtonClick", {
+									[true] call LM_buildMenu_height;
+								}];
+								_ctrlButtonHeightPos ctrlCommit 0;
+							
+							
+							LM_buildMenu_distance = {
+								if (!(isNil "ctrlObj")) then {
+									if (alive ctrlObj) then {
+										detach player;
+										if ((_this select 0)) then {
+											ctrlObj setPos (ctrlObj modelToWorld [0,ctrlSliderPower,0]);
+										} else {
+											ctrlObj setPos (ctrlObj modelToWorld [0,-(ctrlSliderPower),0]);
+										};
+										[ctrlObj, player] call BIS_fnc_attachToRelative;
+										_y = objYaw; _p = objPitch; _r = objRoll;  
+										ctrlObj setVectorDirAndUp [  
+											[sin _y * cos _p, cos _y * cos _p, sin _p],  
+											[[sin _r, -sin _p, cos _r * cos _p], -_y] call BIS_fnc_rotateVector2D  
+										];
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+								} else {
+									systemChat "[ LOG ] Please select an object first!";
+									playSound "3DEN_notificationWarning";
+								};
+							};
+							_ctrlTitleDistance = _display ctrlCreate ["RscText", -1, _ctrlGroup];
+								_ctrlTitleDistance ctrlSetText "Distance:";
+								_ctrlTitleDistance ctrlSetPosition [0, 0.73, 0.135, 0.04];
+								_ctrlTitleDistance ctrlSetBackgroundColor [0,0,0,0.6];
+								_ctrlTitleDistance ctrlCommit 0;
+								
+								_ctrlButtonDistanceNeg = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonDistanceNeg ctrlSetPosition [0.14, 0.73, 0.04, 0.04];
+								_ctrlButtonDistanceNeg ctrlSetText "-";
+								_ctrlButtonDistanceNeg ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonDistanceNeg ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonDistanceNeg ctrlAddEventHandler ["ButtonClick", {
+									[false] call LM_buildMenu_distance;
+								}];
+								_ctrlButtonDistanceNeg ctrlCommit 0;
+								
+								_ctrlButtonDistancePos = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonDistancePos ctrlSetPosition [0.185, 0.73, 0.04, 0.04];
+								_ctrlButtonDistancePos ctrlSetText "+";
+								_ctrlButtonDistancePos ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonDistancePos ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonDistancePos ctrlAddEventHandler ["ButtonClick", {
+									[true] call LM_buildMenu_distance;
+								}];
+								_ctrlButtonDistancePos ctrlCommit 0;
+								
+								
+							_ctrlButtonAlign = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonAlign ctrlSetPosition [0, 0.775, 0.225, 0.04];
+								_ctrlButtonAlign ctrlSetText "Surface Align";
+								_ctrlButtonAlign ctrlSetTooltip "Align Object to Below Surface";
+								_ctrlButtonAlign ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonAlign ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonAlign ctrlAddEventHandler ["ButtonClick", {
+									if (!(isNil "ctrlObj")) then {
+										if (alive ctrlObj) then {
+											detach placedObj;
+											placedObj setVectorUp surfaceNormal position placedObj;
+											[placedObj, ctrlObj] call BIS_fnc_attachToRelative;
+										} else {
+											systemChat "[ LOG ] Please select an object first!";
+											playSound "3DEN_notificationWarning";
+										};
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+
+								}];
+								_ctrlButtonAlign ctrlCommit 0;
+								
+								
+							_ctrlButtonSnap = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonSnap ctrlSetPosition [0, 0.82, 0.225, 0.04];
+								_ctrlButtonSnap ctrlSetText "Surface Place";
+								_ctrlButtonSnap ctrlSetTooltip "Place Object aligned with and on the Ground";
+								_ctrlButtonSnap ctrlSetTextColor LM_trimColor_RGBA;
+								_ctrlButtonSnap ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonSnap ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonSnap ctrlAddEventHandler ["ButtonClick", {
+									if (!(isNil "ctrlObj")) then {
+										if (alive ctrlObj) then {
+											if (speed player == 0) then {
+												detach placedObj;
+												placedObj setVehicleLock "UNLOCKED";
+												placedObj setPos [((position placedObj) select 0), ((position placedObj) select 1), 0];
+												placedObj setVectorUp surfaceNormal position placedObj;
+												deleteVehicle ctrlObj;
+												placedObj = ctrlObj;
+												objYaw = 0; objPitch = 0; objRoll = 0;
+												ctrlPicturePreview ctrlSetText "";
+												playSound "3DEN_notificationDefault";
+												[ 
+													"", 
+													0,
+													safeZoneY+0.025, 
+													99999, 
+													2, 
+													0, 
+													3093 
+												] spawn bis_fnc_dynamicText;
+												[placedObj, true] remoteExec ["enableDynamicSimulation", 0, true];
+											} else {
+												systemChat "[ LOG ] To place an object you must not be moving!";
+												playSound "3DEN_notificationWarning";
+											};
+										} else {
+											systemChat "[ LOG ] Please select an object first!";
+											playSound "3DEN_notificationWarning";
+										};
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+
+								}];
+								_ctrlButtonSnap ctrlCommit 0;
+								
+								
+							_ctrlButtonPlace = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonPlace ctrlSetPosition [0, 0.865, 0.225, 0.04];
+								_ctrlButtonPlace ctrlSetText "Position Place";
+								_ctrlButtonPlace ctrlSetTooltip "Place Object in its Current Position";
+								_ctrlButtonPlace ctrlSetTextColor LM_trimColor_RGBA;
+								_ctrlButtonPlace ctrlSetBackgroundColor [0,0,0,0.4];
+								_ctrlButtonPlace ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonPlace ctrlAddEventHandler ["ButtonClick", {
+									if (!(isNil "ctrlObj")) then {
+										if (alive ctrlObj) then {
+											if (speed player == 0) then {
+												detach placedObj;
+												placedObj setVehicleLock "UNLOCKED";
+												deleteVehicle ctrlObj;
+												placedObj = ctrlObj;
+												objYaw = 0; objPitch = 0; objRoll = 0;
+												ctrlPicturePreview ctrlSetText "";
+												playSound "3DEN_notificationDefault";
+												[ 
+													"", 
+													0,
+													safeZoneY+0.025, 
+													99999, 
+													2, 
+													0, 
+													3093 
+												] spawn bis_fnc_dynamicText;
+												[placedObj, true] remoteExec ["enableDynamicSimulation", 0, true];
+											} else {
+												systemChat "[ LOG ] To place an object you must not be moving!";
+												playSound "3DEN_notificationWarning";
+											};
+										} else {
+											systemChat "[ LOG ] Please select an object first!";
+											playSound "3DEN_notificationWarning";
+										};
+									} else {
+										systemChat "[ LOG ] Please select an object first!";
+										playSound "3DEN_notificationWarning";
+									};
+
+								}];
+								_ctrlButtonPlace ctrlCommit 0;
+								
+								
+							_ctrlButtonDelete = _display ctrlCreate ["RscButtonMenu", -1, _ctrlGroup];
+								_ctrlButtonDelete ctrlSetPosition [0, 0.91, 0.225, 0.04];
+								_ctrlButtonDelete ctrlSetText "Delete Object";
+								_ctrlButtonDelete ctrlSetTooltip "Delete currently selected Object before placement, or delete\nthe object you are currently looking at which you placed earlier.";
+								_ctrlButtonDelete ctrlSetBackgroundColor [0.5,0,0,1];
+								_ctrlButtonDelete ctrlSetActiveColor [0,0,0,0.6];
+								_ctrlButtonDelete ctrlAddEventHandler ["ButtonClick", {
+									if (!(isNil "ctrlObj")) then {
+										deleteVehicle placedObj;
+										if (alive ctrlObj) then {
+											deleteVehicle ctrlObj;
+											objYaw = 0; objPitch = 0; objRoll = 0;
+											ctrlPicturePreview ctrlSetText "";
+											systemChat "[ LOG ] Object you were going to place, is now deleted!";
+											playSound "3DEN_notificationDefault";
+											[ 
+												"", 
+												0,
+												safeZoneY+0.025, 
+												99999, 
+												2, 
+												0, 
+												3093 
+											] spawn bis_fnc_dynamicText;
+										} else {
+											[] call LM_fnc_deletePlacedObject;
+										};
+									} else {
+										[] call LM_fnc_deletePlacedObject;
+									};
+								}];
+								_ctrlButtonDelete ctrlCommit 0;
+							
+							
+							_ctrlGroup ctrlSetPosition [safeZoneXAbs+0.05, safeZoneY+0.05, 0.5675, 2];
+							_ctrlGroup ctrlCommit 0;
+							playSound "Hint";
+							showChat true;
+							
+							_mpehID = player addMPEventHandler ["MPRespawn", { 
+								[ 
+									"", 
+									0,
+									safeZoneY+0.025, 
+									99999, 
+									2, 
+									0, 
+									3093 
+								] spawn bis_fnc_dynamicText; 
 							}];
-							_ctrlButtonDelete ctrlCommit 0;
-						
-						
-						_ctrlGroup ctrlSetPosition [safeZoneXAbs+0.05, safeZoneY+0.05, 0.5675, 2];
-						_ctrlGroup ctrlCommit 0;
-						playSound "Hint";
-						showChat true;
-						
-						player addMPEventHandler ["MPRespawn", { 
+							
+							_dehID = (findDisplay 46) displayAddEventHandler ["KeyDown", {
+								if (((_this select 1) == 12)) then {
+									if (_this select 2) then {
+										[true] call LM_buildMenu_height;
+									} else {
+										if (_this select 4) then {
+											[false] call LM_buildMenu_height;
+										};
+									};
+								} else {
+									if (((_this select 1) == 13)) then {
+										if (_this select 2) then {
+											[true] call LM_buildMenu_distance;
+										} else {
+											if (_this select 4) then {
+												[false] call LM_buildMenu_distance;
+											};
+										};
+									} else {
+										if (((_this select 1) == 26)) then {
+											if (_this select 2) then {
+												[true] call LM_buildMenu_pitch;
+											} else {
+												if (_this select 4) then {
+													[false] call LM_buildMenu_pitch;
+												};
+											};
+										} else {
+											if (((_this select 1) == 27)) then {
+												if (_this select 2) then {
+													[true] call LM_buildMenu_roll;
+												} else {
+													if (_this select 4) then {
+														[false] call LM_buildMenu_roll;
+													};
+												};
+											} else {
+												if (((_this select 1) == 43)) then {
+													if (_this select 2) then {
+														[true] call LM_buildMenu_yaw;
+													} else {
+														if (_this select 4) then {
+															[false] call LM_buildMenu_yaw;
+														};
+													};
+												};
+											};
+										};
+									};
+								};
+							}];
+							
+							player setVariable ["LM_MPEH_buildMenuMPEH",_mpehID,0];
+							player setVariable ["LM_DEH_buildMenuDEH",_dehID,0];
+						};
+					};
+				}) splitString "";
+				_buildCode deleteAt (count _buildCode - 1);
+				_buildCode deleteAt 0;
+				missionNamespace setVariable ["LM_fnc_buildMenuVariable",_buildCode,0];
+				if (_menuAccess) then {
+					[_entity,{
+						params ["_entity"];
+						if (player == _entity) then {
+							waitUntil {!isNull (findDisplay 46) && alive player};
+							(player getVariable ['LM_var_buildMenuDisplay', displayNull]) closeDisplay 1;
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown', (player getVariable ["LM_DEH_buildMenuDEH",-1])];
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown', (player getVariable ['LM_DEH_buildMenu', -1])];
+							player removeMPEventHandler ["MPRespawn", (player getVariable ["LM_MPEH_buildMenuMPEH",-1])];
+							_dehID = (findDisplay 46) displayAddEventHandler ["KeyDown", ((missionNamespace getVariable "LM_fnc_buildMenuVariable") joinString "")];
+							player setVariable ['LM_DEH_buildMenu', _dehID, 0];
+							player setVariable ['LM_var_buildMenuActive', true, 0];
+						};
+						titleText [format ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>'<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>' can now access the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Build Menu</t> by pressing '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">CTRL+B</t>'!</t>", (name _entity)], "PLAIN DOWN", -1, false, true];
+					}] remoteExec ['bis_fnc_call',0,false];
+					systemchat format ["[ LOG ] Build menu action for '%1' has been enabled!", (name _entity)];
+				} else {
+					[_entity,{
+						params ["_entity"];
+						if (player == _entity) then {
+							waitUntil {!isNull (findDisplay 46) && alive player};
+							(player getVariable ['LM_var_buildMenuDisplay', displayNull]) closeDisplay 1;
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown', (player getVariable ["LM_DEH_buildMenuDEH",-1])];
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown', (player getVariable ['LM_DEH_buildMenu', -1])];
+							player removeMPEventHandler ["MPRespawn", (player getVariable ["LM_MPEH_buildMenuMPEH",-1])];
+							player setVariable ['LM_var_buildMenuActive', false, 0];
+							if (isNil "placedObj") then {
+								placedObj = objNull;
+							};
+							if (isNil "ctrlObj") then {
+								ctrlObj = objNull;
+							};
+							deleteVehicle placedObj;
+							deleteVehicle ctrlObj;
 							[ 
 								"", 
 								0,
@@ -23420,77 +23618,17 @@ MAZ_EZM_fnc_initFunction = {
 								2, 
 								0, 
 								3093 
-							] spawn bis_fnc_dynamicText; 
-						}];
-						
-						(findDisplay 46) displayAddEventHandler ["KeyDown", {
-							if (((_this select 1) == 12)) then {
-								if (_this select 2) then {
-									[true] call LM_buildMenu_height;
-								} else {
-									if (_this select 4) then {
-										[false] call LM_buildMenu_height;
-									};
-								};
-							} else {
-								if (((_this select 1) == 13)) then {
-									if (_this select 2) then {
-										[true] call LM_buildMenu_distance;
-									} else {
-										if (_this select 4) then {
-											[false] call LM_buildMenu_distance;
-										};
-									};
-								} else {
-									if (((_this select 1) == 26)) then {
-										if (_this select 2) then {
-											[true] call LM_buildMenu_pitch;
-										} else {
-											if (_this select 4) then {
-												[false] call LM_buildMenu_pitch;
-											};
-										};
-									} else {
-										if (((_this select 1) == 27)) then {
-											if (_this select 2) then {
-												[true] call LM_buildMenu_roll;
-											} else {
-												if (_this select 4) then {
-													[false] call LM_buildMenu_roll;
-												};
-											};
-										} else {
-											if (((_this select 1) == 43)) then {
-												if (_this select 2) then {
-													[true] call LM_buildMenu_yaw;
-												} else {
-													if (_this select 4) then {
-														[false] call LM_buildMenu_yaw;
-													};
-												};
-											};
-										};
-									};
-								};
-							};
-						}];
-					};
+							] spawn bis_fnc_dynamicText;
+						};
+						titleText [format ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>'<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>' no longer has access to the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Build Menu</t>!</t>", (name _entity)], "PLAIN DOWN", -1, false, true];
+					}] remoteExec ['bis_fnc_call',0,false];
+					systemchat format ["[ LOG ] Build menu action for '%1' has been disabled!", (name _entity)];
 				};
-			}) splitString "";
-			_buildCode deleteAt (count _buildCode - 1);
-			_buildCode deleteAt 0;
-			missionNamespace setVariable ["LM_fnc_buildMenuVariable",_buildCode,true];
-			[_entity,{
-				params ["_entity"];
-				if (player == _entity) then {
-					waitUntil {!isNull (findDisplay 46) && alive player};
-					(findDisplay 46) displayRemoveEventHandler ['KeyDown', (player getVariable ['LM_DEH_buildMenu', -1])];
-					_dehID = (findDisplay 46) displayAddEventHandler ["KeyDown", ((missionNamespace getVariable "LM_fnc_buildMenuVariable") joinString "")];
-					player setVariable ['LM_DEH_buildMenu', _dehID];
-				};
-				titleText [format ["<t size='1.5' font='PuristaBold'><img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/> <t underline='1' shadow='1' color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">AEGIS: <t color='#FFFFFF'>9.2.0</t></t> <img image='\A3\Ui_f\data\GUI\Cfg\UnitInsignia\TFAegis_ca.paa'/><br/>'<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">%1</t>' can now access the <t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">Build Menu</t> by pressing '<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + ">CTRL+B</t>'!</t>", (name _entity)], "PLAIN DOWN", -1, false, true];
-			}] remoteExec ['bis_fnc_call',0,false];
-			systemchat format ["[ LOG ] Build menu action on respawn for '%1' has been enabled!", (name _entity)];
+				_display closeDisplay 1; 
+			},{
+				params ["_values","_args","_display"];
+				_display closeDisplay 2;
+			},_entity] call MAZ_EZM_fnc_createDialog;
 		};
 
 		LM_fnc_bulletTracingModule = {
@@ -25763,12 +25901,12 @@ MAZ_EZM_fnc_initFunction = {
 				],
 				[
 				 "TOOLBOX:ENABLED",
-				 ["Truck Airdrop:","Control access to Truck Airdrop support"],
+				 ["HMG Truck Airdrop:","Control access to HMG Truck Airdrop support"],
 				 [(_entity getVariable ["_supportTruck",false])]
 				],
 				[
 				 "TOOLBOX:ENABLED",
-				 ["Transport Airdrop:","Control access to Transport Airdrop support"],
+				 ["Troop Transport Airdrop:","Control access to Troop Transport Airdrop support"],
 				 [(_entity getVariable ["_supportTransport",false])]
 				],
 				[
@@ -26585,7 +26723,7 @@ MAZ_EZM_fnc_initFunction = {
 						[[_entity],{
 							params ['_entity'];
 							sleep 2;
-							_entity setVariable ["_supportTruck_ItemID", ([_entity,"Call",["Truck Airdrop (1 HMG)"],["
+							_entity setVariable ["_supportTruck_ItemID", ([_entity,"Call",["HMG Truck Airdrop"],["
 								Support_fnc_getScreenPosition = {
 									params [['_screenPos',getMousePosition,[[]],2]];
 
@@ -26681,6 +26819,10 @@ MAZ_EZM_fnc_initFunction = {
 									_veh = (([AGLtoASL [0,0,80], _dropLoad, 1, [0,0,0],_dir,{0},true] call BIS_fnc_spawnObjects) select 0);
 									_veh allowDamage false;
 									_veh attachTo [_para,[0,0,0]];
+									if (worldName == 'Enoch') then {
+										_veh setObjectTextureGlobal [0, 'a3\soft_f_enoch\offroad_01\data\offroad_01_ext_eaf_co.paa'];
+										_veh setObjectTextureGlobal [1, 'a3\soft_f_enoch\offroad_01\data\offroad_01_ext_eaf_co.paa'];
+									};
 
 									_carrier animateDoor [_doorAnim,0];
 									
@@ -26745,7 +26887,7 @@ MAZ_EZM_fnc_initFunction = {
 							"]] call BIS_fnc_addCommMenuItem)];
 							_entity setVariable ["_supportTruck",true];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now has access to the Truck Airdrop support (1 HMG)!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now has access to the HMG Truck Airdrop support (1 HMG)!", (name _entity)];
 					};
 				} else {
 					if (!((_entity getVariable ["_supportTruck_ItemID",-1]) == -1)) then {
@@ -26756,7 +26898,7 @@ MAZ_EZM_fnc_initFunction = {
 							_entity setVariable ["_supportTruck_ItemID",-1];
 							_entity setVariable ["_supportTruck",false];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now no longer has access to the Truck Airdrop support (1 HMG)!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now no longer has access to the HMG Truck Airdrop support (1 HMG)!", (name _entity)];
 					};
 				};
 				
@@ -26765,7 +26907,7 @@ MAZ_EZM_fnc_initFunction = {
 						[[_entity],{
 							params ['_entity'];
 							sleep 2;
-							_entity setVariable ["_supportTransport_ItemID", ([_entity,"Call",["Transport Truck Airdrop"],["
+							_entity setVariable ["_supportTransport_ItemID", ([_entity,"Call",["Troop Transport Airdrop"],["
 								Support_fnc_getScreenPosition = {
 									params [['_screenPos',getMousePosition,[[]],2]];
 
@@ -26793,7 +26935,7 @@ MAZ_EZM_fnc_initFunction = {
 												player sideRadio (selectRandom ['mp_groundsupport_01_slingloadrequested_IHQ_0','mp_groundsupport_01_slingloadrequested_IHQ_1','mp_groundsupport_01_slingloadrequested_IHQ_2']);
 											};
 										};
-										[_side, 'HQ'] sideChat (format ['Be advised, 1x Transport Truck Airdrop inbound to Grid ''%1''!', (mapGridPosition (_pos))]);
+										[_side, 'HQ'] sideChat (format ['Be advised, 1x Troop Transport Airdrop inbound to Grid ''%1''!', (mapGridPosition (_pos))]);
 									};
 								}] remoteExec ['bis_fnc_call',0,false];
 								[_pos,_side] spawn {
@@ -26898,7 +27040,7 @@ MAZ_EZM_fnc_initFunction = {
 													player sideRadio (selectRandom ['mp_groundsupport_10_slingloadsucceeded_IHQ_0','mp_groundsupport_10_slingloadsucceeded_IHQ_1','mp_groundsupport_10_slingloadsucceeded_IHQ_2']);
 												};
 											};
-											[_side, 'HQ'] sideChat (format ['Be advised, 1x Transport Truck Airdrop successfully landed at Grid ''%1''!', (mapGridPosition (_pos))]);
+											[_side, 'HQ'] sideChat (format ['Be advised, 1x Troop Transport Airdrop successfully landed at Grid ''%1''!', (mapGridPosition (_pos))]);
 										};
 									}] remoteExec ['bis_fnc_call',0,false];
 									
@@ -26925,7 +27067,7 @@ MAZ_EZM_fnc_initFunction = {
 							"]] call BIS_fnc_addCommMenuItem)];
 							_entity setVariable ["_supportTransport",true];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now has access to the Transport Truck Airdrop support!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now has access to the Troop Transport Truck Airdrop support!", (name _entity)];
 					};
 				} else {
 					if (!((_entity getVariable ["_supportTransport_ItemID",-1]) == -1)) then {
@@ -26936,7 +27078,7 @@ MAZ_EZM_fnc_initFunction = {
 							_entity setVariable ["_supportTransport_ItemID",-1];
 							_entity setVariable ["_supportTransport",false];
 						}] remoteExec ['bis_fnc_call',0,false];
-						systemchat format ["[ LOG ] '%1' now no longer has access to the Transport Truck Airdrop support!", (name _entity)];
+						systemchat format ["[ LOG ] '%1' now no longer has access to the Troop Transport Truck Airdrop support!", (name _entity)];
 					};
 				};
 				
@@ -29318,6 +29460,9 @@ MAZ_EZM_fnc_initFunction = {
 							
 							_cameraHolder = (player getVariable '_helmetCamera_cameraHolder');
 							_camera = (player getVariable '_helmetCamera_camera');
+							
+							(findDisplay 46) displayRemoveEventHandler ['KeyDown',(player getVariable ['LM_DEH_helmetCamera_reload',-1])];
+							(findDisplay 46) displayRemoveEventHandler ['MouseButtonDown',(player getVariable ['LM_DEH_helmetCamera_fire',-1])];
 							
 							deleteVehicle _cameraHolder;
 							deleteVehicle _camera;
@@ -32457,6 +32602,8 @@ MAZ_EZM_fnc_initFunction = {
 			if (M9SD_AIO_shouldCreateBox) then 
 			{
 				M9SD_AIO_SupplyBox = createVehicle ["B_supplyCrate_F", _pos, [], 0, "CAN_COLLIDE"];
+				_pos set [2, (_pos # 2) + 0.1];
+				M9SD_AIO_SupplyBox setPos _pos;
 				M9SD_AIO_SupplyBox setVehicleVarName "M9SD_AIO_SupplyBox";
 				M9SD_AIO_SupplyBox allowdamage false;;
 				M9SD_AIO_HelipadLight = createVehicle["PortableHelipadLight_01_green_F", _pos, [], 0, "CAN_COLLIDE"];
@@ -35952,6 +36099,16 @@ MAZ_EZM_fnc_initFunction = {
 						0,
 						0
 					]
+				],
+				[
+					"LIST",
+					"NOTE: To drive the destroyer, interact with the laptop in the bridge, center of the room.",
+					[
+						[],
+						[[]],
+						0,
+						0
+					]
 				]
 			],{
 				params ["_values","_entity","_display"];
@@ -35980,7 +36137,7 @@ MAZ_EZM_fnc_initFunction = {
 									};
 									[_target,_actionId] remoteExec ["BIS_fnc_holdActionRemove", 0, true];
 									
-									[_caller,["LM_currentChair",_target]] remoteExec ["setVariable",0, true];
+									_caller setVariable ["LM_currentChair",_target,0];
 									titleText ["<t color=" + str([(profileNamespace getVariable ['GUI_BCG_RGB_R', 0.898]),(profileNamespace getVariable ['GUI_BCG_RGB_G', 0.78]),(profileNamespace getVariable ['GUI_BCG_RGB_B', 0.443]),(profileNamespace getVariable ['GUI_BCG_RGB_A', 1])] call BIS_fnc_colorRGBAtoHTML) + " size='2'font='PuristaBold'>PRESS 'W' TO EXIT, 'A' OR 'D' TO ROTATE</t>", "PLAIN DOWN", -1, false, true];
 									LM_fnc_exitChair = (findDisplay 46) displayAddEventHandler ["KeyDown", {
 										if ((_this select 1) == 17) then {
@@ -35988,7 +36145,7 @@ MAZ_EZM_fnc_initFunction = {
 											detach player;
 											[player, ""] remoteExec ['switchMove', 0, true];
 											[player getVariable ["LM_currentChair", objNull]] call LM_fnc_enterChair;
-											[player,["LM_currentChair",objNull]] remoteExec ["setVariable",0,true];
+											player setVariable ["LM_currentChair",objNull,0];
 											(findDisplay 46) displayRemoveEventHandler ["keyDown", LM_fnc_exitChair];
 											(findDisplay 46) displayRemoveEventHandler ["keyDown", LM_fnc_rotateChair];
 										};
@@ -36038,7 +36195,7 @@ MAZ_EZM_fnc_initFunction = {
 										_destroyerMisc = _target getVariable ["LM_var_destroyerMisc", []];
 										
 										if ([crew _destroyerBoat] in [[[]]]) then {
-											_caller setVariable ["LM_var_destroyerComp", _target];
+											_caller setVariable ["LM_var_destroyerComp", _target, 0];
 											titleCut ['', 'BLACK', 2];
 											_destroyerBoat setPosASL [(getPosASL _destroyerBoat) select 0, (getPosASL _destroyerBoat) select 1, 0];
 											[_destroyerBoat, 0, 0] call BIS_fnc_setPitchBank;
@@ -36089,8 +36246,8 @@ MAZ_EZM_fnc_initFunction = {
 												4091 
 											] spawn bis_fnc_dynamicText;
 											
-											_caller setVariable ["LM_var_camera1p", _camera1p];
-											_caller setVariable ["LM_var_camera3p", _camera3p];
+											_caller setVariable ["LM_var_camera1p", _camera1p, 0];
+											_caller setVariable ["LM_var_camera3p", _camera3p, 0];
 											
 											[_destroyerBoat,false] remoteExec ["hideObjectGlobal",0,true];
 											[_destroyerBoat,12] remoteExec ["forceSpeed", 0, true];
@@ -36469,20 +36626,20 @@ MAZ_EZM_fnc_initFunction = {
 						[(group _x), true] remoteExec ["enableDynamicSimulation", 0, true];
 					} forEach (_destroyerPrts + _destroyerGuns + _destroyerTgts + [_destroyerHelo] + _destroyerCars + _destroyerChrs + _destroyerMisc);
 					
-					[_destroyerComp,["LM_var_destroyerOwner",player]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerBody",_destroyerBody]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerDeck",_destroyerDeck]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerHelo",_destroyerHelo]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerBoat",_destroyerBoat]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyer1PCM",_destroyer1PCM]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyer3PCM",_destroyer3PCM]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerGuns",_destroyerGuns]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerPrts",_destroyerPrts]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerTgts",_destroyerTgts]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerCars",_destroyerCars]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerChrs",_destroyerChrs]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerMisc",_destroyerMisc]] remoteExec ["setVariable",0,true];
-					[_destroyerComp,["LM_var_destroyerObjs",_placedDecor]] remoteExec ["setVariable",0,true];
+					_destroyerComp setVariable ["LM_var_destroyerOwner",player,true];
+					_destroyerComp setVariable ["LM_var_destroyerBody",_destroyerBody,0];
+					_destroyerComp setVariable ["LM_var_destroyerDeck",_destroyerDeck,0];
+					_destroyerComp setVariable ["LM_var_destroyerHelo",_destroyerHelo,0];
+					_destroyerComp setVariable ["LM_var_destroyerBoat",_destroyerBoat,0];
+					_destroyerComp setVariable ["LM_var_destroyer1PCM",_destroyer1PCM,0];
+					_destroyerComp setVariable ["LM_var_destroyer3PCM",_destroyer3PCM,0];
+					_destroyerComp setVariable ["LM_var_destroyerGuns",_destroyerGuns,0];
+					_destroyerComp setVariable ["LM_var_destroyerPrts",_destroyerPrts,0];
+					_destroyerComp setVariable ["LM_var_destroyerTgts",_destroyerTgts,0];
+					_destroyerComp setVariable ["LM_var_destroyerCars",_destroyerCars,0];
+					_destroyerComp setVariable ["LM_var_destroyerChrs",_destroyerChrs,0];
+					_destroyerComp setVariable ["LM_var_destroyerMisc",_destroyerMisc,0];
+					_destroyerComp setVariable ["LM_var_destroyerObjs",_placedDecor,0];
 					
 					[format ["DDG %1%2%3 '%4' deployed!",round(_hullNum1),round(_hullNum2),round(_hullNum3),(_hullName select 1)],"addItemOk"] call MAZ_EZM_fnc_systemMessage;
 				};
@@ -38712,6 +38869,9 @@ MAZ_EZM_fnc_initFunction = {
 				if !(isnull (missionnamespace getvariable ["bis_fnc_moduleRemoteControl_unit",objnull])) exitwith {};
 
 				private _targetObjArray = curatorMouseOver;
+				if ((_targetObjArray isEqualTo []) || (_targetObjArray isEqualTo [''])) then {
+					_targetObjArray = ["",objNull];
+				};
 				_unit = _targetObjArray select 1;
 				_unit = effectivecommander _unit;
 
@@ -52927,13 +53087,36 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 
 ["Create Zeus Unit?",[
 	[
+		"EDIT",
+		["Release:","The title of this version of AEGIS, helpful for identifying the latest version on Steam/GitHub."],
+		"V-9.2.0-0.2"
+	],
+	[
+		"EDIT",
+		["Release Date:","Day and time this version of AEGIS was released."],
+		"3/22/23, 03:00 UTC"
+	],
+	[
+		"EDIT:MULTI",
+		["Release Notes:","See a list of the latest updates tied to the above release."],
+		['• Enhanced Movement: Added to the "CTRL+SPACE" keybind a check for if a player is within 1 meter of a object. If so depending on its height, a climb animation will be played in order to scale on-top or over the object.
+
+• Arsenal Restrictions: Added new check to clean loadout if restrictions active upon pressing the "ENTER" keys. Added for NATO items: 100 Round Khaki Tracer MX Magazine, .45ACP Green Pistol, P07 Black Pistol, All SPAR Magazine Color Variants, Woodland Assault Backpack, and Coyote Carryall Backpack.
+
+• Dynamic Tasks: For task type "Intel Transfer" fixed the spawned UAV from floating, now properly spawned angled to associated crater on ground.
+
+• Player/Vehicle Respawn: Placed respawns for Players and Vehicles regardless of side will now properly appear to players who Join in Progress after placement.
+
+• Support Menu: "Truck" support renamed to "HMG Truck". "Transport" support renamed to "Troop Transport".']
+	],
+	[
 		"TOOLBOX:YESNO",
 		["Create Zeus Unit","Whether to create a new controllable unit for your player."],
 		[true]
 	]
 ],{
 	params ["_values","_args","_display"];
-	_values params ["_createZeusUnit"];
+	_values params ["_note1","_note2","_note3","_createZeusUnit"];
 	if(_createZeusUnit) then {
 		[] spawn MAZ_EZM_createUnitForZeus;
 	} else {
@@ -53252,20 +53435,133 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 				};
 			}];
 			
-			player addMPEventHandler ["MPRespawn", { 
-				_entity = player;
-				[[_entity],{
+			player addMPEventHandler ["MPRespawn", {
+				[player] spawn {
 					params ["_entity"];
-					{
-						_x addCuratorEditableObjects [[_entity],true];
-					} foreach allCurators;
-				}] remoteExec ["Spawn",2];
+					waitUntil {!isNull (findDisplay 46) && alive _entity};
+					[[_entity],{
+						params ["_entity"];
+						{
+							_x addCuratorEditableObjects [[_entity],true];
+						} foreach allCurators;
+					}] remoteExec ["Spawn",2];
+					["InitializePlayer", [_entity]] call BIS_fnc_dynamicGroups;
+				};
 			}];
+			
+			PDTH_distance2Box = {
+				params ["_unit","_obj"];
+				_uPos = _obj worldToModel (getPosATL _unit);
+				_oBox = boundingBoxReal _obj;
+				_pt = [0, 0, 0];
+				{
+					if (_x < (_oBox select 0 select _forEachIndex)) then {
+						_pt set [_forEachIndex, (_oBox select 0 select _forEachIndex) - _x];
+					} else {
+						if ((_oBox select 1 select _forEachIndex) < _x) then {
+							_pt set [_forEachIndex, _x - (_oBox select 1 select _forEachIndex)];
+						}
+					}
+				} forEach _uPos;
+				_pt distance [0, 0, 0]
+			};
 			
 			(findDisplay 46) displayAddEventHandler ["KeyDown", {
 				if (((_this select 1) == 57) and (_this select 3)) then {
 					if ((isNull objectParent player) and !(incapacitatedState player == "UNCONSCIOUS") and (lifeState player == "HEALTHY") and (stance player == "STAND") and !(animationState player == "AovrPercMrunSrasWrflDf")) then {
-						[player, "AovrPercMrunSrasWrflDf"] remoteExec ["switchMove",0,false];
+						_obj = cursorObject;
+						_dist = [player, _obj] call PDTH_distance2Box;
+						_house = lineIntersectsSurfaces [getPosWorld player,getPosWorld player vectorAdd [0,0,50],player,objNull,true,1,"GEOM","NONE"];
+						_inside = false;
+						if (((_house select 0) select 3) isKindOf "house") then {
+							if (_obj == ((_house select 0) select 3)) then {
+								_inside = true;
+							};
+						};
+						_diff = ((0 boundingBoxReal _obj) select 1) vectorDiff ((0 boundingBoxReal _obj) select 0);
+						_objHeight = _diff vectorDotProduct [0,0,1];
+						_objTopZ = (((getPosATL _obj) select 2) + _objHeight) - ((getPosATL player) select 2);
+						_eyesVector = [round ((eyeDirection player) select 0), round ((eyeDirection player) select 1), round ((eyeDirection player) select 2)];
+						_bodyVector = [round ((vectorDirVisual player) select 0), round ((vectorDirVisual player) select 1), round ((vectorDirVisual player) select 2)];
+						if ((_dist <= 1) and !((getPosATL _obj) in [[0,0,0]]) and (_objTopZ >= 0.6) and !(_inside) and (_eyesVector in [_bodyVector])) then {
+							[_obj, _dist, _objTopZ] spawn {
+								params ["_obj","_dist", "_objTopZ"];
+								if (!([_obj] in [[objNull]]) and !(((_obj call BIS_fnc_objectType) select 0) in ["Soldier","Vehicle","VehicleAutonomous","Logic"])) then {
+									_anim = "";
+									_pos= [];
+									if (_objTopZ >= 0.6 and _objTopZ <= 1) then {
+										_anim = "getinhelicoptercargorfl";
+										if (!((animationState player) == _anim) and !(_anim == "")) then {
+											_lockDirection = [] spawn {
+												_dir = getDir player;
+												while {true} do {
+													[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+												};
+											};
+											_pos = ((getPos player) getPos [_dist + 0.4, (getDir player)]);
+											_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+											player allowDamage false;
+											[player, _anim] remoteExec ["switchMove",0,false];
+											[player, _anim] remoteExec ["playMoveNow",0,false];
+											waitUntil {!((animationState player) == _anim)};
+											[player, ""] remoteExec ["switchMove",0,false];
+											player setPosASL (AGLToASL _pos);
+											terminate _lockDirection;
+											sleep 0.5;
+											player allowDamage true;
+										};
+									} else {
+										if (_objTopZ > 1 and _objTopZ < 2) then {
+											_anim = "getinmrap_01_cargo";
+											if (!((animationState player) == _anim) and !(_anim == "")) then {
+												_lockDirection = [] spawn {
+													_dir = getDir player;
+													while {true} do {
+														[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+													};
+												};
+												_pos = ((getPos player) getPos [_dist + 1, (getDir player)]);
+												_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+												player allowDamage false;
+												[player, _anim] remoteExec ["switchMove",0,false];
+												[player, _anim] remoteExec ["playMoveNow",0,false];
+												waitUntil {!((animationState player) == _anim)};
+												[player, ""] remoteExec ["switchMove",0,false];
+												player setPosASL (AGLToASL _pos);
+												terminate _lockDirection;
+												sleep 1;
+												player allowDamage true;
+											};
+										} else {
+											if (_objTopZ >= 2 and _objTopZ <= 4.5) then {
+												_anim = "getinhemttback";
+												if (!((animationState player) == _anim) and !(_anim == "")) then {
+													_lockDirection = [] spawn {
+														_dir = getDir player;
+														while {true} do {
+															[player, [getDir player,(((player) call BIS_fnc_getPitchBank) select 0),(((player) call BIS_fnc_getPitchBank) select 1)]] call BIS_fnc_setObjectRotation;
+														};
+													};
+													_pos = ((getPos player) getPos [_dist + 1.2, (getDir player)]);
+													_pos = [(_pos select 0), (_pos select 1), (((getPosATL player) select 2) + _objTopZ + 0.2)];
+													player allowDamage false;
+													[player, _anim] remoteExec ["switchMove",0,false];
+													[player, _anim] remoteExec ["playMoveNow",0,false];
+													sleep 3.1;
+													[player, ""] remoteExec ["switchMove",0,false];
+													player setPosASL (AGLToASL _pos);
+													terminate _lockDirection;
+													sleep 1;
+													player allowDamage true;
+												};
+											};
+										};
+									};
+								};
+							};
+						} else {
+							[player, "AovrPercMrunSrasWrflDf"] remoteExec ["switchMove",0,false];
+						};
 					};
 				};
 			}];
@@ -53281,7 +53577,7 @@ if(isNil "MAZ_EZM_modulesAdded") then {
 						0,
 						0,
 						0,
-						"• Press 'CTRL+SPACE' whilst upright to Jump",
+						"• Press 'CTRL+SPACE' whilst upright to Jump or whilst near an object to Climb",
 						1,
 						(1.75 / (6.4 * worldSize / 8192 * ctrlMapScale ((findDisplay 12) displayCtrl 51)))/(("Altis" call BIS_fnc_mapSize) / (worldSize)),
 						"PuristaBold",
