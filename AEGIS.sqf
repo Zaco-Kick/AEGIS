@@ -52855,7 +52855,7 @@ MAZ_EZM_addZeusKeybinds_46 = {
 	}];
 };
 
-JAM_wGUIfnc_groupMenuTeamSwitcher = {
+JAM_GUIfnc_groupMenuTeamSwitcher = {
 	if (!isNull findDisplay 60490) exitWith {};
 	with uiNamespace do 
 	{
